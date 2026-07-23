@@ -5,16 +5,73 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import Colors from '../../../config/Colors';
 import Fonts from '../../../config/Fonts';
-import CustomButton from '../../../components/CustomButton';
 import AppText from '../../../components/AppText';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, selectProducts } from '../../../store/productSlice';
 import { selectRole } from '../../../store/authSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import VendorHeader from '../../../components/VendorHeader';
+import Svg, { Polygon, Line, Rect, Circle, Path } from 'react-native-svg';
+
+// Custom SVG Laundry Care Icons to match premium design mockup
+const DoNotBleachIcon = () => (
+  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Polygon
+      points="12,3 22,21 2,21"
+      stroke="#8A8A8F"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <Line x1="7" y1="11" x2="17" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
+    <Line x1="17" y1="11" x2="7" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
+  </Svg>
+);
+
+const DoNotTumbleDryIcon = () => (
+  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Rect
+      x="3"
+      y="3"
+      width="18"
+      height="18"
+      rx="2"
+      stroke="#8A8A8F"
+      strokeWidth="2"
+    />
+    <Circle cx="12" cy="12" r="6" stroke="#8A8A8F" strokeWidth="1.5" />
+    <Line x1="5" y1="5" x2="19" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
+    <Line x1="19" y1="5" x2="5" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
+  </Svg>
+);
+
+const DryCleanIcon = () => (
+  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="9" stroke="#8A8A8F" strokeWidth="2" />
+    <Path d="M7 17 H17" stroke="#8A8A8F" strokeWidth="1.5" />
+  </Svg>
+);
+
+const IronIcon = () => (
+  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M3 17 H21 L19 11 C18 9 16 8 14 8 H7 C5 8 4 9 3 11 Z"
+      stroke="#8A8A8F"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M7 8 V5 H15 V8"
+      stroke="#8A8A8F"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+    <Circle cx="8" cy="13" r="1" fill="#8A8A8F" />
+  </Svg>
+);
 
 const ProductDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -27,7 +84,7 @@ const ProductDetails = ({ route, navigation }) => {
     routeProduct || {
       name: 'Italian Navy Wool Suit Fabric',
       category: 'Fabrics',
-      price: 180,
+      price: 120,
       rating: 4.8,
       reviews: 42,
       stock: 15,
@@ -37,9 +94,10 @@ const ProductDetails = ({ route, navigation }) => {
         'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
     };
 
-  const [selectedFit, setSelectedFit] = useState('Slim Fit');
-  const [qty, setQty] = useState(1);
+  const [qty] = useState(1);
   const [addedAlert, setAddedAlert] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('black');
+  const [expandedSection, setExpandedSection] = useState('shipping');
 
   const handleAddToCart = () => {
     dispatch(addToCart({ product, quantity: qty }));
@@ -47,8 +105,15 @@ const ProductDetails = ({ route, navigation }) => {
     setTimeout(() => setAddedAlert(false), 2000);
   };
 
+  const toggleSection = section => {
+    if (expandedSection === section) {
+      setExpandedSection(null);
+    } else {
+      setExpandedSection(section);
+    }
+  };
+
   if (isVendor) {
-    // Determine a smart color name based on product name
     let colorVal = 'Olive Green';
     const lowerName = product.name.toLowerCase();
     if (lowerName.includes('navy')) colorVal = 'Navy Blue';
@@ -72,7 +137,6 @@ const ProductDetails = ({ route, navigation }) => {
           contentContainerStyle={styles.scrollContainerVendor}
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Info Card Row */}
           <View style={styles.topInfoRow}>
             <Image
               source={{ uri: product.image }}
@@ -88,32 +152,26 @@ const ProductDetails = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* Details Section */}
           <View style={styles.detailsSection}>
-            {/* Description */}
             <AppText style={styles.detailSectionHeader}>Description</AppText>
             <AppText style={styles.detailSectionContent}>
               {product.description ||
                 'No description available for this product.'}
             </AppText>
 
-            {/* Category */}
             <AppText style={styles.detailSectionHeader}>Category</AppText>
             <AppText style={styles.detailSectionContent}>
               {product.category}
             </AppText>
 
-            {/* Stock */}
             <AppText style={styles.detailSectionHeader}>Stock</AppText>
             <AppText style={styles.detailSectionContent}>
               {product.stock > 0 ? `Available` : 'Out of Stock'}
             </AppText>
 
-            {/* Color */}
             <AppText style={styles.detailSectionHeader}>Color</AppText>
             <AppText style={styles.detailSectionContent}>{colorVal}</AppText>
 
-            {/* Material */}
             <AppText style={styles.detailSectionHeader}>Material</AppText>
             <AppText style={styles.detailSectionContent}>
               {product.material || 'Standard Fabric'}
@@ -121,7 +179,6 @@ const ProductDetails = ({ route, navigation }) => {
           </View>
         </ScrollView>
 
-        {/* Bottom Edit Product Button */}
         <View style={styles.bottomBtnContainerVendor}>
           <TouchableOpacity
             style={styles.editButton}
@@ -142,360 +199,453 @@ const ProductDetails = ({ route, navigation }) => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.white }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Image source={{ uri: product.image }} style={styles.image} />
+    <View style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: product.image }} style={styles.image} />
 
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <AppText style={styles.backText}>‹</AppText>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={20} color="#000000" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.8}>
+            <Feather name="maximize-2" size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Diamond Pagination Indicators */}
+        <View style={styles.diamondsRow}>
+          <View style={[styles.diamondDot, styles.diamondDotActive]} />
+          <View style={styles.diamondDot} />
+          <View style={styles.diamondDot} />
+          <View style={styles.diamondDot} />
+          <View style={styles.diamondDot} />
+        </View>
 
         <View style={styles.body}>
-          <View style={styles.titleRow}>
-            <View style={{ flex: 1 }}>
-              <AppText style={styles.category}>
-                {product.category.toUpperCase()}
-              </AppText>
-              <AppText style={styles.name}>{product.name}</AppText>
-            </View>
-            <AppText style={styles.price}>${product.price}</AppText>
-          </View>
-
-          <View style={styles.ratingRow}>
-            <AppText style={styles.star}>★ {product.rating}</AppText>
-            <AppText style={styles.reviews}>
-              ({product.reviews} customer reviews)
-            </AppText>
-            <View style={styles.stockBadge}>
-              <AppText style={styles.stockText}>
-                In Stock ({product.stock})
-              </AppText>
-            </View>
-          </View>
-
-          <AppText style={styles.sectionHeader}>
-            DESCRIPTION & SPECIFICATIONS
+          {/* Title block */}
+          <AppText style={styles.name}>{product.name.toUpperCase()}</AppText>
+          <AppText style={styles.subtitle}>Lorem Ipsum Dummy</AppText>
+          <AppText style={styles.priceText}>
+            ${product.price}{' '}
+            {product.category === 'Fabrics' ? 'Per Meter' : 'Per Unit'}
           </AppText>
-          <AppText style={styles.desc}>{product.description}</AppText>
 
-          <View style={styles.specRow}>
-            <View style={styles.specBox}>
-              <AppText style={styles.specLabel}>Material</AppText>
-              <AppText style={styles.specVal}>{product.material}</AppText>
-            </View>
-            <View style={styles.specBox}>
-              <AppText style={styles.specLabel}>Weave</AppText>
-              <AppText style={styles.specVal}>Super 130s</AppText>
-            </View>
-            <View style={styles.specBox}>
-              <AppText style={styles.specLabel}>Origin</AppText>
-              <AppText style={styles.specVal}>Italy</AppText>
-            </View>
-          </View>
-
-          <AppText style={styles.sectionHeader}>SELECT FIT CONTOUR</AppText>
-          <View style={styles.fitRow}>
-            {['Slim Fit', 'Custom Tailored', 'Regular Fit'].map(fit => (
+          {/* Colors Selection Row */}
+          <View style={styles.colorRow}>
+            <AppText style={styles.colorLabel}>Color</AppText>
+            <View style={styles.colorDots}>
               <TouchableOpacity
-                key={fit}
                 style={[
-                  styles.fitChip,
-                  selectedFit === fit && styles.fitChipSelected,
+                  styles.colorDot,
+                  styles.colorDotBlack,
+                  selectedColor === 'black' && styles.colorDotSelected,
                 ]}
-                onPress={() => setSelectedFit(fit)}
-              >
-                <AppText
-                  style={[
-                    styles.fitText,
-                    selectedFit === fit && styles.fitTextSelected,
-                  ]}
-                >
-                  {fit}
-                </AppText>
-              </TouchableOpacity>
-            ))}
+                onPress={() => setSelectedColor('black')}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.colorDot,
+                  styles.colorDotCoral,
+                  selectedColor === 'coral' && styles.colorDotSelected,
+                ]}
+                onPress={() => setSelectedColor('coral')}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.colorDot,
+                  styles.colorDotGray,
+                  selectedColor === 'gray' && styles.colorDotSelected,
+                ]}
+                onPress={() => setSelectedColor('gray')}
+              />
+            </View>
           </View>
 
-          <AppText style={styles.sectionHeader}>QUANTITY</AppText>
-          <View style={styles.qtyRow}>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => setQty(Math.max(1, qty - 1))}
-            >
-              <AppText style={styles.qtyBtnText}>-</AppText>
-            </TouchableOpacity>
-            <AppText style={styles.qtyText}>{qty}</AppText>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => setQty(qty + 1)}
-            >
-              <AppText style={styles.qtyBtnText}>+</AppText>
-            </TouchableOpacity>
+          {/* Materials Section */}
+          <View style={styles.infoBlock}>
+            <AppText style={styles.sectionHeader}>MATERIALS</AppText>
+            <AppText style={styles.sectionParagraph}>
+              We work with monitoring programmes to ensure compliance with
+              safety, health and quality standards for our products.
+            </AppText>
+          </View>
+
+          {/* Care Section */}
+          <View style={styles.infoBlock}>
+            <AppText style={styles.sectionHeader}>CARE</AppText>
+            <AppText style={styles.sectionParagraph}>
+              To keep your jackets and coats clean, you only need to freshen
+              them up and go over them with a cloth or a clothes brush. If you
+              need to dry clean a garment, look for a dry cleaner that uses
+              technologies that are respectful of the environment.
+            </AppText>
+
+            {/* Laundry Care List */}
+            <View style={styles.careList}>
+              <View style={styles.careRow}>
+                <DoNotBleachIcon />
+                <AppText style={styles.careText}>Do not use bleach</AppText>
+              </View>
+              <View style={styles.careRow}>
+                <DoNotTumbleDryIcon />
+                <AppText style={styles.careText}>Do not tumble dry</AppText>
+              </View>
+              <View style={styles.careRow}>
+                <DryCleanIcon />
+                <AppText style={styles.careText}>
+                  Dry clean with tetrachloroethylene
+                </AppText>
+              </View>
+              <View style={styles.careRow}>
+                <IronIcon />
+                <AppText style={styles.careText}>
+                  Iron at a maximum of 110°C/230°F
+                </AppText>
+              </View>
+            </View>
+          </View>
+
+          {/* Care / Shipping Policies Accordion Section */}
+          <View style={styles.infoBlock}>
+            <AppText style={styles.sectionHeader}>CARE</AppText>
+            <View style={styles.accordionContainer}>
+              {/* Shipping Row */}
+              <View style={styles.accordionItem}>
+                <TouchableOpacity
+                  style={styles.accordionHeader}
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('shipping')}
+                >
+                  <AppText style={styles.accordionTitle}>
+                    Free Flat Rate Shipping
+                  </AppText>
+                  <Feather
+                    name={
+                      expandedSection === 'shipping'
+                        ? 'chevron-up'
+                        : 'chevron-down'
+                    }
+                    size={18}
+                    color="#8A8A8F"
+                  />
+                </TouchableOpacity>
+                {expandedSection === 'shipping' && (
+                  <View style={styles.accordionBody}>
+                    <AppText style={styles.accordionBodyText}>
+                      Estimated to be delivered on 09/11/2021 - 12/11/2021.
+                    </AppText>
+                  </View>
+                )}
+              </View>
+
+              {/* COD Row */}
+              <View style={styles.accordionItem}>
+                <TouchableOpacity
+                  style={styles.accordionHeader}
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('cod')}
+                >
+                  <AppText style={styles.accordionTitle}>COD Policy</AppText>
+                  <Feather
+                    name={
+                      expandedSection === 'cod' ? 'chevron-up' : 'chevron-down'
+                    }
+                    size={18}
+                    color="#8A8A8F"
+                  />
+                </TouchableOpacity>
+                {expandedSection === 'cod' && (
+                  <View style={styles.accordionBody}>
+                    <AppText style={styles.accordionBodyText}>
+                      Cash on Delivery is available for all fabric and readymade
+                      orders within standard service zones.
+                    </AppText>
+                  </View>
+                )}
+              </View>
+
+              {/* Return Row */}
+              <View style={styles.accordionItem}>
+                <TouchableOpacity
+                  style={styles.accordionHeader}
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('return')}
+                >
+                  <AppText style={styles.accordionTitle}>Return Policy</AppText>
+                  <Feather
+                    name={
+                      expandedSection === 'return'
+                        ? 'chevron-up'
+                        : 'chevron-down'
+                    }
+                    size={18}
+                    color="#8A8A8F"
+                  />
+                </TouchableOpacity>
+                {expandedSection === 'return' && (
+                  <View style={styles.accordionBody}>
+                    <AppText style={styles.accordionBodyText}>
+                      14-day hassle-free return policy. Fabric must be uncut,
+                      clean, and in original packaging for returns.
+                    </AppText>
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
 
+      {/* Add To Cart Footer Bar */}
       <View style={styles.bottomBar}>
-        <CustomButton
-          title={
-            addedAlert
-              ? '✓ Added to Cart!'
-              : `Add to Cart • $${product.price * qty}`
-          }
+        <TouchableOpacity
+          style={styles.addToCartBtn}
+          activeOpacity={0.85}
           onPress={handleAddToCart}
-          variant={addedAlert ? 'secondary' : 'primary'}
-          style={{ flex: 1, marginRight: 10 }}
-        />
-        <CustomButton
-          title="Buy Now"
-          onPress={() => {
-            addToCart(product, qty);
-            navigation.navigate('CartCheckout');
-          }}
-          variant="outline"
-          style={{ width: 110 }}
-        />
+        >
+          <View style={styles.flex1} />
+          <AppText style={styles.addToCartText}>
+            {addedAlert ? '✓ Added to Cart' : 'Add to Cart'}
+          </AppText>
+          <View style={styles.arrowIconContainer}>
+            <Feather name="arrow-right" size={20} color="#000000" />
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
   container: {
-    paddingBottom: 100,
+    paddingBottom: 110,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 380,
+    position: 'relative',
   },
   image: {
     width: '100%',
-    height: 320,
-    backgroundColor: Colors.textinputboxcolor,
+    height: '100%',
+    resizeMode: 'cover',
   },
   backBtn: {
     position: 'absolute',
-    top: 44,
+    top: Platform.OS === 'ios' ? 50 : 24,
     left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  zoomBtn: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backText: {
-    fontSize: 26,
-    color: Colors.secondary,
-    marginTop: -4,
+  diamondsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  diamondDot: {
+    width: 6,
+    height: 6,
+    borderWidth: 1.2,
+    borderColor: '#C7C7CC',
+    transform: [{ rotate: '45deg' }],
+    marginHorizontal: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  diamondDotActive: {
+    borderColor: '#DBA83A',
+    backgroundColor: '#DBA83A',
   },
   body: {
-    padding: 20,
-  },
-  category: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-    letterSpacing: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 4,
+    paddingHorizontal: 20,
   },
   name: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.secondary,
+    color: '#000000',
+    letterSpacing: 2.5,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
-  price: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-    marginLeft: 10,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  star: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.star,
-    marginRight: 6,
-  },
-  reviews: {
-    fontSize: 12,
-    color: Colors.lightblack,
-    marginRight: 10,
-  },
-  stockBadge: {
-    backgroundColor: Colors.greenBG,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  stockText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.green,
-  },
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.lightblack,
-    letterSpacing: 1,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  desc: {
+  subtitle: {
     fontSize: 14,
-    color: Colors.black,
-    lineHeight: 22,
-  },
-  specRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  specBox: {
-    flex: 1,
-    backgroundColor: Colors.whitebackgroundcolor,
-    padding: 10,
-    borderRadius: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-  },
-  specLabel: {
-    fontSize: 10,
-    color: Colors.lightblack,
-  },
-  specVal: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.secondary,
-    marginTop: 2,
-  },
-  fitRow: {
-    flexDirection: 'row',
+    color: '#8A8A8F',
     marginTop: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
-  fitChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-    marginRight: 10,
-    backgroundColor: Colors.textinputboxcolor,
-  },
-  fitChipSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.whitebackgroundcolor,
-  },
-  fitText: {
-    fontSize: 13,
-    color: Colors.secondary,
-    fontWeight: '600',
-  },
-  fitTextSelected: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
-  },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  qtyBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.textinputboxcolor,
-  },
-  qtyBtnText: {
+  priceText: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.secondary,
+    color: '#000000',
+    marginTop: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
-  qtyText: {
-    fontSize: 16,
+  colorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  colorLabel: {
+    fontSize: 13,
+    color: '#8A8A8F',
+    marginRight: 16,
+  },
+  colorDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  colorDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  colorDotSelected: {
+    borderColor: '#DBA83A',
+    borderWidth: 1.5,
+    transform: [{ scale: 1.25 }],
+  },
+  infoBlock: {
+    marginTop: 28,
+  },
+  sectionHeader: {
+    fontSize: 12,
     fontWeight: '700',
-    color: Colors.secondary,
-    marginHorizontal: 16,
+    color: '#000000',
+    letterSpacing: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    marginBottom: 10,
+  },
+  sectionParagraph: {
+    fontSize: 13,
+    color: '#7C7C7C',
+    lineHeight: 20,
+  },
+  careList: {
+    marginTop: 16,
+  },
+  careRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  careText: {
+    marginLeft: 14,
+    fontSize: 13,
+    color: '#4A4A4A',
+  },
+  accordionContainer: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  accordionItem: {
+    borderBottomWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  accordionTitle: {
+    fontSize: 13.5,
+    color: '#000000',
+  },
+  accordionBody: {
+    paddingBottom: 14,
+    paddingHorizontal: 2,
+  },
+  accordionBodyText: {
+    fontSize: 13,
+    color: '#7C7C7C',
+    lineHeight: 18,
   },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.graybordercolor,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 0,
+  },
+  addToCartBtn: {
+    backgroundColor: '#DBA83A',
+    height: 54,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
   },
+  addToCartText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  colorDotBlack: {
+    backgroundColor: '#000000',
+  },
+  colorDotCoral: {
+    backgroundColor: '#E07C53',
+  },
+  colorDotGray: {
+    backgroundColor: '#E5E4E2',
+  },
+  flex1: {
+    flex: 1,
+  },
+  arrowIconContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingRight: 20,
+  },
+
   /* Vendor Specific Styles */
   safeAreaVendor: {
     flex: 1,
     backgroundColor: Colors.white,
-  },
-  vendorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: Colors.white,
-  },
-  backBtnVendor: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  vendorTitleContainer: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  vendorTitleText: {
-    fontSize: 20,
-    fontFamily: Fonts.regular,
-    letterSpacing: 3,
-    color: '#000000',
-  },
-  diamondContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-    width: 160,
-  },
-  diamondLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DEDEDE',
-  },
-  diamond: {
-    width: 6,
-    height: 6,
-    borderWidth: 1,
-    borderColor: '#DEDEDE',
-    transform: [{ rotate: '45deg' }],
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 8,
-  },
-  placeholderBtn: {
-    width: 40,
   },
   scrollContainerVendor: {
     paddingHorizontal: 24,

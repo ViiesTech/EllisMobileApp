@@ -8,4 +8,5 @@ export const AppImages = {
   alteration: require('./alteration.png'),
   tuxedo: require('./tuxedo.png'),
   placeholder: require('./placeholder.png'),
+  exploreTailors: require('./exploreTailors.png'),
 };

@@ -1,340 +1,338 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import React from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from 'react-native';
 import Colors from '../../config/Colors';
-import { ProductCard } from '../../components/ProductCard';
 import AppText from '../../components/AppText';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectProducts, selectCart, addToCart } from '../../store/productSlice';
-import { selectTailors } from '../../store/bookingSlice';
-
-const CATEGORIES = ['All', 'Suits', 'Fabrics', 'Shirts', 'Trousers'];
+import { useSelector } from 'react-redux';
+import { selectProducts, selectCart } from '../../store/productSlice';
+import { selectUser } from '../../store/authSlice';
+import Feather from 'react-native-vector-icons/Feather';
+import { AppImages } from '../../assets/images/AppImages';
 
 const Home = ({ navigation }) => {
-  const dispatch = useDispatch();
   const products = useSelector(selectProducts);
-  const tailors = useSelector(selectTailors);
   const cart = useSelector(selectCart);
-  const [selectedCat, setSelectedCat] = useState('All');
-  const [search, setSearch] = useState('');
-
-  const filteredProducts = products.filter((p) => {
-    const matchCat = selectedCat === 'All' || p.category === selectedCat;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const userProfile = useSelector(selectUser) || {};
 
   const cartTotalItems = cart.reduce((acc, i) => acc + i.qty, 0);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Top Banner */}
-      <View style={styles.banner}>
-        <View style={styles.bannerTextCol}>
-          <AppText style={styles.bannerSub}>BESPOKE APPAREL</AppText>
-          <AppText style={styles.bannerTitle}>Custom Fit & Premium Fabrics</AppText>
-          <TouchableOpacity
-            style={styles.bannerBtn}
-            onPress={() => navigation.navigate('SelectedLandscaper', { tailor: tailors[0] })}
-          >
-            <AppText style={styles.bannerBtnText}>Book Doorstep Tailor ›</AppText>
+    <View style={styles.safeArea}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header row */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Image
+              source={{
+                uri:
+                  userProfile.avatar ||
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+              }}
+              style={styles.headerAvatar}
+            />
+            <View style={styles.headerTextCol}>
+              <AppText style={styles.headerGreeting}>Good Morning 👋</AppText>
+              <AppText style={styles.headerName}>
+                {userProfile.name || 'Alex Charlie'}
+              </AppText>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.headerBellBtn} activeOpacity={0.7}>
+            <Feather name="bell" size={22} color="#000000" />
+            <View style={styles.bellBadgeDot} />
           </TouchableOpacity>
         </View>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&auto=format&fit=crop&q=80' }}
-          style={styles.bannerImg}
-        />
-      </View>
 
-      {/* Search & Cart Header */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchBar}>
-          <AppText style={styles.searchIcon}>🔍</AppText>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search suits, fabrics, shirts..."
-            placeholderTextColor={Colors.gray}
-            value={search}
-            onChangeText={setSearch}
+        {/* Tailoring Service Banner */}
+        <TouchableOpacity
+          style={styles.bannerCard}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('Tailors')}
+        >
+          <Image
+            source={AppImages.exploreTailors}
+            style={styles.bannerBgImg}
+            resizeMode="cover"
           />
-        </View>
-        <TouchableOpacity style={styles.cartIconBtn} onPress={() => navigation.navigate('Cart')}>
-          <AppText style={styles.cartIcon}>🛍️</AppText>
-          {cartTotalItems > 0 && (
-            <View style={styles.cartBadge}>
-              <AppText style={styles.cartBadgeText}>{cartTotalItems}</AppText>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Categories Horizontal Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.catScroll}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-      >
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.catChip, selectedCat === cat && styles.catChipActive]}
-            onPress={() => setSelectedCat(cat)}
-          >
-            <AppText
-              style={[
-                styles.catText,
-                selectedCat === cat && styles.catTextActive,
-              ]}
+          <View style={styles.bannerContent}>
+            <AppText style={styles.bannerTitleText}>
+              Tailoring{'\n'}Service
+            </AppText>
+            <TouchableOpacity
+              style={styles.bannerExploreBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Tailors')}
             >
-              {cat}
-            </AppText>
-          </TouchableOpacity>
-        ))}
+              <AppText style={styles.bannerExploreText}>Explore</AppText>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+        {/* N E W   A R R I V A L Section */}
+        <View style={styles.newArrivalSection}>
+          <AppText style={styles.newArrivalText}>N E W A R R I V A L</AppText>
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <View style={styles.diamond} />
+            <View style={styles.dividerLine} />
+          </View>
+        </View>
+
+        {/* Grid Products */}
+        <View style={styles.grid}>
+          {products.map(prod => (
+            <TouchableOpacity
+              key={prod.id}
+              style={styles.gridItem}
+              onPress={() =>
+                navigation.navigate('ProductDetails', { product: prod })
+              }
+              activeOpacity={0.9}
+            >
+              <Image
+                source={{ uri: prod.image }}
+                style={styles.gridItemImage}
+              />
+              <AppText style={styles.gridItemName}>{prod.name}</AppText>
+              <AppText style={styles.gridItemPrice}>${prod.price}</AppText>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
 
-      {/* Section 1: Featured Products Grid */}
-      <View style={styles.sectionHeader}>
-        <AppText style={styles.sectionTitle}>Featured Collections</AppText>
-        <AppText style={styles.sectionCount}>{filteredProducts.length} items</AppText>
-      </View>
-
-      <View style={styles.grid}>
-        {filteredProducts.map((prod) => (
-          <ProductCard
-            key={prod.id}
-            product={prod}
-            onPress={(p) => navigation.navigate('ProductDetails', { product: p })}
-            onAddToCart={(p) => dispatch(addToCart({ product: p, quantity: 1 }))}
-          />
-        ))}
-      </View>
-
-      {/* Section 2: Recommended Tailors Banner */}
-      <View style={styles.sectionHeader}>
-        <AppText style={styles.sectionTitle}>Master Tailors Near You</AppText>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+      {/* Floating Cart Button (FAB) */}
+      <TouchableOpacity
+        style={styles.floatingCartBtn}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('CartCheckout')}
       >
-        {tailors.map((tailor) => (
-          <TouchableOpacity
-            key={tailor.id}
-            style={styles.tailorMiniCard}
-            onPress={() => navigation.navigate('SelectedLandscaper', { tailor })}
-          >
-            <Image source={{ uri: tailor.image }} style={styles.tailorMiniImg} />
-            <AppText style={styles.tailorMiniName} numberOfLines={1}>
-              {tailor.name}
+        <Feather name="shopping-bag" size={24} color={Colors.white} />
+        {cartTotalItems > 0 && (
+          <View style={styles.floatingCartBadge}>
+            <AppText style={styles.floatingCartBadgeText}>
+              {cartTotalItems}
             </AppText>
-            <AppText style={styles.tailorMiniSub}>{tailor.experience}</AppText>
-            <View style={styles.tailorMiniPriceRow}>
-              <AppText style={styles.tailorMiniPrice}>From ${tailor.priceStarting}</AppText>
-              <AppText style={styles.tailorMiniRating}>★ {tailor.rating}</AppText>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </ScrollView>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.whitebackgroundcolor,
+    backgroundColor: Colors.white,
   },
-  banner: {
-    backgroundColor: Colors.secondary,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 18,
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    overflow: 'hidden',
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 16,
   },
-  bannerTextCol: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  bannerSub: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1.5,
-  },
-  bannerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.white,
-    marginTop: 4,
-    lineHeight: 24,
-  },
-  bannerBtn: {
-    marginTop: 12,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  bannerBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  bannerImg: {
-    width: 90,
-    height: 100,
-    borderRadius: 12,
-  },
-  searchRow: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 16,
   },
-  searchBar: {
-    flex: 1,
-    height: 44,
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+  headerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
   },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: 8,
+  headerTextCol: {
+    marginLeft: 12,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.secondary,
-  },
-  cartIconBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  cartIcon: {
-    fontSize: 18,
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.primaryDark,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cartBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  catScroll: {
-    marginTop: 16,
-  },
-  catChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-  },
-  catChipActive: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
-  },
-  catText: {
+  headerGreeting: {
     fontSize: 13,
-    fontWeight: '600',
-    color: Colors.black,
+    color: '#8A8A8F',
+    fontWeight: '400',
   },
-  catTextActive: {
-    color: Colors.white,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  sectionTitle: {
+  headerName: {
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.secondary,
+    color: '#000000',
+    marginTop: 2,
   },
-  sectionCount: {
+  headerBellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: Colors.primary,
+  },
+  bellBadgeDot: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.redDot,
+  },
+  bannerCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    height: 160,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#DBA83A',
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  bannerBgImg: {
+    position: 'absolute',
+    right: 0,
+    width: '100%',
+    height: '100%',
+  },
+  bannerContent: {
+    position: 'absolute',
+    left: 20,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    width: '45%',
+    zIndex: 2,
+  },
+  bannerTitleText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    lineHeight: 30,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+  },
+  bannerExploreBtn: {
+    marginTop: 14,
+    backgroundColor: '#000000',
+    paddingVertical: 8,
+    paddingHorizontal: 22,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  bannerExploreText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    color: Colors.lightblack,
+    fontWeight: '700',
+  },
+  newArrivalSection: {
+    alignItems: 'center',
+    marginTop: 32,
+    marginBottom: 20,
+  },
+  newArrivalText: {
+    fontSize: 18,
+    letterSpacing: 4,
+    color: '#000000',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '400',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '60%',
+    marginTop: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#EAEAEA',
+  },
+  diamond: {
+    width: 6,
+    height: 6,
+    borderWidth: 1,
+    borderColor: '#DBA83A',
+    backgroundColor: Colors.white,
+    transform: [{ rotate: '45deg' }],
+    marginHorizontal: 8,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingBottom: 30,
   },
-  tailorMiniCard: {
-    width: 140,
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 10,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-  },
-  tailorMiniImg: {
-    width: '100%',
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  tailorMiniName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.secondary,
-  },
-  tailorMiniSub: {
-    fontSize: 11,
-    color: Colors.lightblack,
-    marginTop: 2,
-  },
-  tailorMiniPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  gridItem: {
+    width: '47%',
+    marginBottom: 24,
     alignItems: 'center',
-    marginTop: 6,
   },
-  tailorMiniPrice: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primaryDark,
+  gridItemImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 0,
+    backgroundColor: '#F5F5F5',
   },
-  tailorMiniRating: {
-    fontSize: 11,
+  gridItemName: {
+    fontSize: 14,
+    color: '#000000',
+    marginTop: 8,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+  },
+  gridItemPrice: {
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.star,
+    color: '#000000',
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+  },
+  floatingCartBtn: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#DBA83A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    elevation: 5,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  floatingCartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#000000',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#DBA83A',
+  },
+  floatingCartBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
 

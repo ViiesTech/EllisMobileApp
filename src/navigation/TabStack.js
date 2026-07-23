@@ -1,28 +1,49 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View } from 'react-native';
-import Colors from '../config/Colors';
-import AppText from '../components/AppText';
+import { Platform } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Home from '../screens/User/Home';
 import SelectLandscaper from '../screens/User/SelectLandscaper';
 import UserBookings from '../screens/User/Booking/UserBookings';
-import CartCheckout from '../screens/User/Booking/CartCheckout';
+import UserOrders from '../screens/User/UserOrders';
+import UserProfile from '../screens/User/UserProfile';
 
 const Tab = createBottomTabNavigator();
+
+const renderTabIcon = (focusedName, outlineName) => {
+  return ({ focused, color }) => (
+    <Ionicons
+      name={focused ? focusedName : outlineName}
+      size={22}
+      color={color}
+    />
+  );
+};
 
 const TabStack = () => {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primaryDark,
-        tabBarInactiveTintColor: Colors.gray,
+        tabBarActiveTintColor: '#000000',
+        tabBarInactiveTintColor: 'rgba(0, 0, 0, 0.45)',
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          paddingBottom: 4,
+        },
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          height: 60,
-          paddingBottom: 8,
+          backgroundColor: '#DBA83A',
+          height: Platform.OS === 'ios' ? 82 : 66,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: '#000000',
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: -4 },
         },
       }}
     >
@@ -31,15 +52,15 @@ const TabStack = () => {
         component={Home}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <AppText style={{ fontSize: 18 }}>🏠</AppText>,
+          tabBarIcon: renderTabIcon('home', 'home-outline'),
         }}
       />
       <Tab.Screen
-        name="Tailors"
+        name="Shop"
         component={SelectLandscaper}
         options={{
-          tabBarLabel: 'Tailors',
-          tabBarIcon: ({ color }) => <AppText style={{ fontSize: 18 }}>✂️</AppText>,
+          tabBarLabel: 'Shop',
+          tabBarIcon: renderTabIcon('bag', 'bag-outline'),
         }}
       />
       <Tab.Screen
@@ -47,15 +68,23 @@ const TabStack = () => {
         component={UserBookings}
         options={{
           tabBarLabel: 'Bookings',
-          tabBarIcon: ({ color }) => <AppText style={{ fontSize: 18 }}>📋</AppText>,
+          tabBarIcon: renderTabIcon('clipboard', 'clipboard-outline'),
         }}
       />
       <Tab.Screen
-        name="Cart"
-        component={CartCheckout}
+        name="Orders"
+        component={UserOrders}
         options={{
-          tabBarLabel: 'Cart',
-          tabBarIcon: ({ color }) => <AppText style={{ fontSize: 18 }}>🛍️</AppText>,
+          tabBarLabel: 'Orders',
+          tabBarIcon: renderTabIcon('document-text', 'document-text-outline'),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={UserProfile}
+        options={{
+          tabBarLabel: 'Profile',
+          tabBarIcon: renderTabIcon('person', 'person-outline'),
         }}
       />
     </Tab.Navigator>
