@@ -18,19 +18,19 @@ import { showToast } from '../../components/Toast';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 
-const VendorEditProfile = ({ navigation }) => {
+const TailorEditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
 
   // Split full name into first and last name
   const nameParts = (userProfile.name || '').trim().split(/\s+/);
-  const initialFirstName = nameParts[0] || 'Alex';
-  const initialLastName = nameParts.slice(1).join(' ') || 'Charlie';
+  const initialFirstName = nameParts[0] || 'Liam';
+  const initialLastName = nameParts.slice(1).join(' ') || 'James';
 
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
   const [email, setEmail] = useState(
-    userProfile.email || 'alexcharlie878@gmail.com',
+    userProfile.email || 'liamjames878@gmail.com',
   );
   const [imageUri, setImageUri] = useState(userProfile.avatar || '');
 
@@ -99,7 +99,7 @@ const VendorEditProfile = ({ navigation }) => {
                 source={{
                   uri:
                     imageUri ||
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
                 }}
                 style={styles.avatarImage}
               />
@@ -118,13 +118,13 @@ const VendorEditProfile = ({ navigation }) => {
               label="First Name"
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Alex"
+              placeholder="Liam"
             />
             <TextField
               label="Last Name"
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Charlie"
+              placeholder="James"
             />
             <TextField
               label="Email"
@@ -135,6 +135,22 @@ const VendorEditProfile = ({ navigation }) => {
               leftIcon="mail"
               editable={false}
             />
+            {/* <TextField
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              secureTextEntry={true}
+              leftIcon="lock"
+            />
+            <TextField
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="••••••••"
+              secureTextEntry={true}
+              leftIcon="lock"
+            /> */}
           </View>
         </ScrollView>
         <View style={styles.buttonContainer}>
@@ -206,4 +222,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VendorEditProfile;
+export default TailorEditProfile;

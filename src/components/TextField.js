@@ -19,6 +19,7 @@ export const TextField = ({
   style,
   inputStyle,
   containerStyle,
+  editable,
 }) => {
   return (
     <View style={[styles.container, style]}>
@@ -58,6 +59,7 @@ export const TextField = ({
           keyboardType={keyboardType}
           multiline={multiline}
           numberOfLines={numberOfLines}
+          editable={editable}
         />
       </View>
       {error && <AppText style={styles.errorText}>{error}</AppText>}

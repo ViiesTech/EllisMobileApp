@@ -72,6 +72,7 @@ const AddBankAccount = ({ navigation }) => {
     );
 
     showToast('Success', 'Bank account added successfully.', 'success');
+    navigation.goBack();
   };
 
   return (
