@@ -5,158 +5,129 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Dimensions,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
-import CustomButton from '../../components/CustomButton';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSelector } from 'react-redux';
 import { selectProducts } from '../../store/productSlice';
 import { selectOrders } from '../../store/orderSlice';
-import { selectUser } from '../../store/authSlice';
+import VendorHeader from '../../components/VendorHeader';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 
-const RECENT_ORDERS_DATA = [
-  {
-    id: '1',
-    orderNum: '#34567',
-    customer: 'Liam James',
-    itemsInfo: '3 Items - $560',
-    status: 'New',
-    time: '45 mins ago',
-    image:
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '2',
-    orderNum: '#34567',
-    customer: 'Liam James',
-    itemsInfo: '3 Items - $560',
-    status: 'Processing',
-    time: '2 hours ago',
-    image:
-      'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=500&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '3',
-    orderNum: '#34567',
-    customer: 'Liam James',
-    itemsInfo: '3 Items - $560',
-    status: 'New',
-    time: '45 mins ago',
-    image:
-      'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=500&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '4',
-    orderNum: '#34567',
-    customer: 'Liam James',
-    itemsInfo: '3 Items - $560',
-    status: 'New',
-    time: '45 mins ago',
-    image:
-      'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?w=500&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '5',
-    orderNum: '#34567',
-    customer: 'Liam James',
-    itemsInfo: '3 Items - $560',
-    status: 'New',
-    time: '45 mins ago',
-    image:
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-  },
-];
+const { width: screenWidth } = Dimensions.get('window');
+const CARD_WIDTH = (screenWidth - 40 - 36) / 4; // 40 for screen padding, 36 for 3 gaps of 12
 
 const VendorHome = ({ navigation }) => {
   const products = useSelector(selectProducts);
   const orders = useSelector(selectOrders);
-  const userProfile = useSelector(selectUser) || {};
 
   const totalRevenue = orders.reduce((sum, o) => sum + o.price, 0);
 
+  const getStatusBadge = status => {
+    switch (status) {
+      case 'New':
+      case 'Pending':
+        return { bg: '#F9EFCF', border: '#DBA83A', text: '#000000' };
+      case 'Processing':
+        return { bg: '#DBEAFE', border: '#155DFC', text: '#155DFC' };
+      case 'Shipped':
+        return { bg: '#E8FBCF', border: '#295C00', text: '#295C00' };
+      case 'Delivered':
+        return { bg: '#DCFCE7', border: '#15803D', text: '#15803D' };
+      default:
+        return { bg: '#F3F4F6', border: '#9CA3AF', text: '#4B5563' };
+    }
+  };
+
   return (
     <View style={styles.safeArea}>
+      <VendorHeader
+        navigation={navigation}
+        homeHeader={true}
+        notification={true}
+        goBack={false}
+      />
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header */}
-        <View style={styles.topHeader}>
-          <View style={styles.userRow}>
-            <Image
-              source={{
-                uri:
-                  userProfile.avatar ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-              }}
-              style={styles.userAvatar}
-            />
-            <View style={styles.userInfo}>
-              <AppText style={styles.greetingText}>Good Morning 👋</AppText>
-              <AppText style={styles.userName}>
-                {userProfile.name || 'Alex Charlie'}
-              </AppText>
-            </View>
-          </View>
-
-          {/* Notification Button */}
-          <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.8}>
-            <Feather name="bell" size={20} color="#000000" />
-            <View style={styles.badgeDot} />
-          </TouchableOpacity>
-        </View>
-
         {/* 4 Gold Stat Cards */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statsScrollContainer}
-        >
+        <View style={styles.statsContainer}>
           {/* Card 1 */}
           <View style={styles.statCard}>
             <View style={styles.iconCircle}>
-              <Feather name="file-text" size={16} color="#000000" />
+              <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
             <AppText style={styles.statVal}>24</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Orders</AppText>
-            <AppText style={styles.statGrowth}>↑ 12%</AppText>
+            <View style={styles.statGrowthBox}>
+              <FontAwesome6
+                name="arrow-up-long"
+                size={8}
+                color={Colors.black}
+              />
+              <AppText style={styles.statGrowth}>12%</AppText>
+            </View>
           </View>
 
           {/* Card 2 */}
           <View style={styles.statCard}>
             <View style={styles.iconCircle}>
-              <Feather name="shopping-bag" size={16} color="#000000" />
+              <Feather name="shopping-bag" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>
-              {products?.length || 16}
-            </AppText>
+            <AppText style={styles.statVal}>{products?.length || 16}</AppText>
             <AppText style={styles.statTitle}>Active{'\n'}Products</AppText>
-            <AppText style={styles.statGrowth}>↑ 8%</AppText>
+            <View style={styles.statGrowthBox}>
+              <FontAwesome6
+                name="arrow-up-long"
+                size={8}
+                color={Colors.black}
+              />
+              <AppText style={styles.statGrowth}>8%</AppText>
+            </View>
           </View>
 
           {/* Card 3 */}
           <View style={styles.statCard}>
             <View style={styles.iconCircle}>
-              <Feather name="clock" size={16} color="#000000" />
+              <Feather name="clock" size={16} color={Colors.primary} />
             </View>
             <AppText style={styles.statVal}>{orders?.length || 7}</AppText>
             <AppText style={styles.statTitle}>Pending{'\n'}Orders</AppText>
-            <AppText style={styles.statGrowth}>↑ 16%</AppText>
+            <View style={styles.statGrowthBox}>
+              <FontAwesome6
+                name="arrow-up-long"
+                size={8}
+                color={Colors.black}
+              />
+              <AppText style={styles.statGrowth}>16%</AppText>
+            </View>
           </View>
 
           {/* Card 4 */}
           <View style={styles.statCard}>
             <View style={styles.iconCircle}>
-              <Feather name="dollar-sign" size={16} color="#000000" />
+              <Feather name="dollar-sign" size={16} color={Colors.primary} />
             </View>
             <AppText style={styles.statVal}>
-              ${totalRevenue > 0 ? `${(totalRevenue / 1000).toFixed(1)}K` : '1.5K'}
+              $
+              {totalRevenue > 0
+                ? `${(totalRevenue / 1000).toFixed(1)}K`
+                : '1.5K'}
             </AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Revenue</AppText>
-            <AppText style={styles.statGrowth}>↑ 16%</AppText>
+            <View style={styles.statGrowthBox}>
+              <FontAwesome6
+                name="arrow-up-long"
+                size={8}
+                color={Colors.black}
+              />
+              <AppText style={styles.statGrowth}>16%</AppText>
+            </View>
           </View>
-        </ScrollView>
+        </View>
 
         {/* Recent Orders Header */}
         <View style={styles.sectionHeader}>
@@ -171,46 +142,73 @@ const VendorHome = ({ navigation }) => {
 
         {/* Recent Orders List Card */}
         <View style={styles.ordersBox}>
-          {RECENT_ORDERS_DATA.map((ord, idx) => (
-            <TouchableOpacity
-              key={ord.id}
-              style={[
-                styles.orderItemRow,
-                idx < RECENT_ORDERS_DATA.length - 1 && styles.itemDivider,
-              ]}
-              onPress={() => navigation.navigate('VendorOrders')}
-              activeOpacity={0.7}
-            >
-              <Image source={{ uri: ord.image }} style={styles.orderImg} />
+          {orders.slice(0, 5).map((ord, idx) => {
+            const formattedId = ord.id.startsWith('ord-')
+              ? ord.id.replace('ord-', '#')
+              : `#${ord.id}`;
+            const displayCount = orders.slice(0, 5).length;
+            const badgeColors = getStatusBadge(ord.status);
+            return (
+              <TouchableOpacity
+                key={ord.id}
+                style={[
+                  styles.orderItemRow,
+                  idx < displayCount - 1 && styles.itemDivider,
+                ]}
+                onPress={() =>
+                  navigation.navigate('VendorOrderDetails', { order: ord })
+                }
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{
+                    uri:
+                      ord.image ||
+                      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+                  }}
+                  style={styles.orderImg}
+                />
 
-              <View style={styles.orderMidInfo}>
-                <AppText style={styles.orderNum}>Order {ord.orderNum}</AppText>
-                <AppText style={styles.customerName}>{ord.customer}</AppText>
-                <AppText style={styles.itemsSub}>{ord.itemsInfo}</AppText>
-              </View>
-
-              <View style={styles.orderRightCol}>
-                <View style={styles.statusBadge}>
-                  <AppText style={styles.statusBadgeText}>
-                    {ord.status}
+                <View style={styles.orderMidInfo}>
+                  <AppText style={styles.orderNum}>Order {formattedId}</AppText>
+                  <AppText style={styles.customerName}>
+                    {ord.customerName}
+                  </AppText>
+                  <AppText style={styles.itemsSub}>
+                    {ord.itemsInfo || `1 Item - $${ord.price}`}
                   </AppText>
                 </View>
-                <AppText style={styles.timeText}>{ord.time}</AppText>
 
-                <View style={styles.arrowCircle}>
-                  <Feather name="chevron-right" size={16} color="#FFFFFF" />
+                <View style={styles.orderRightCol}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: badgeColors.bg,
+                        borderColor: badgeColors.border,
+                      },
+                    ]}
+                  >
+                    <AppText
+                      style={[
+                        styles.statusBadgeText,
+                        { color: badgeColors.text },
+                      ]}
+                    >
+                      {ord.status}
+                    </AppText>
+                  </View>
+                  <AppText style={styles.timeText}>
+                    {ord.time || '1 hour ago'}
+                  </AppText>
+
+                  <View style={styles.arrowCircle}>
+                    <Feather name="chevron-right" size={16} color="#FFFFFF" />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Add New Product Button */}
-        <View style={styles.btnContainer}>
-          <CustomButton
-            title="Add New Product"
-            onPress={() => navigation.navigate('AddProduct')}
-          />
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>
@@ -227,72 +225,26 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 30,
   },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  userInfo: {
-    justifyContent: 'center',
-  },
-  greetingText: {
-    fontSize: 13,
-    color: '#7C7C7C',
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#DBA83A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  badgeDot: {
-    position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF4D4D',
-  },
 
   /* Metric Cards */
-  statsScrollContainer: {
-    gap: 12,
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 28,
   },
   statCard: {
-    width: 96,
-    height: 140,
-    backgroundColor: '#DBA83A',
-    borderRadius: 16,
-    padding: 12,
+    height: 135,
+    width: CARD_WIDTH,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    padding: 10,
     justifyContent: 'space-between',
   },
   iconCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: Colors.black,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -307,10 +259,15 @@ const styles = StyleSheet.create({
     color: '#000000',
     lineHeight: 13,
   },
+  statGrowthBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   statGrowth: {
     fontSize: 10,
     fontWeight: '700',
     color: '#000000',
+    paddingLeft: 2,
   },
 
   /* Recent Orders Section */
@@ -352,6 +309,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 10,
+    backgroundColor: '#Fafafa',
   },
   orderMidInfo: {
     flex: 1,

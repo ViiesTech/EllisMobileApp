@@ -1,181 +1,347 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
+import { useSelector } from 'react-redux';
 import Colors from '../../config/Colors';
+import Fonts from '../../config/Fonts';
 import AppText from '../../components/AppText';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectOrders, updateOrderStatus } from '../../store/orderSlice';
+import Feather from 'react-native-vector-icons/Feather';
+import { selectOrders } from '../../store/orderSlice';
+import VendorHeader from '../../components/VendorHeader';
 
-const VendorOrders = () => {
-  const dispatch = useDispatch();
+const STATUS_TABS = ['New', 'Processing', 'Shipped', 'Delivered'];
+
+const VendorOrders = ({ navigation }) => {
   const orders = useSelector(selectOrders);
+  const [activeTab, setActiveTab] = useState('New');
+
+  const filteredOrders = orders.filter((o) => {
+    const status = o.status.toLowerCase();
+    const tab = activeTab.toLowerCase();
+    if (tab === 'new') {
+      return status === 'new' || status === 'pending';
+    }
+    return status === tab;
+  });
+
+  const getStatusBadge = status => {
+    switch (status) {
+      case 'New':
+      case 'Pending':
+        return { bg: '#F9EFCF', border: '#DBA83A', text: '#000000' };
+      case 'Processing':
+        return { bg: '#DBEAFE', border: '#155DFC', text: '#155DFC' };
+      case 'Shipped':
+        return { bg: '#E8FBCF', border: '#295C00', text: '#295C00' };
+      case 'Delivered':
+        return { bg: '#DCFCE7', border: '#15803D', text: '#15803D' };
+      default:
+        return { bg: '#F3F4F6', border: '#9CA3AF', text: '#4B5563' };
+    }
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <AppText style={styles.title}>Customer Orders</AppText>
-        <AppText style={styles.sub}>Manage store orders, shipping & fulfillments</AppText>
-      </View>
+    <View style={styles.safeArea}>
+      <VendorHeader
+        navigation={navigation}
+        title="ORDERS"
+        goBack={true}
+        homeHeader={false}
+        notification={false}
+      />
 
-      <View style={styles.list}>
-        {orders.map((ord) => (
-          <View key={ord.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <AppText style={styles.ordId}>{ord.id}</AppText>
-              <View style={[styles.badge, ord.status === 'Delivered' ? styles.badgeSuccess : styles.badgePending]}>
-                <AppText style={styles.badgeText}>{ord.status}</AppText>
-              </View>
-            </View>
-
-            <AppText style={styles.prodName}>{ord.productName}</AppText>
-            <AppText style={styles.customer}>Customer: {ord.customerName}</AppText>
-            <AppText style={styles.address}>Shipping: {ord.address}</AppText>
-
-            <View style={styles.footer}>
-              <AppText style={styles.price}>${ord.price}</AppText>
-
-              {ord.status === 'Pending' && (
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={styles.shipBtn}
-                    onPress={() =>
-                      dispatch(updateOrderStatus({ id: ord.id, status: 'Shipped' }))
-                    }
-                  >
-                    <AppText style={styles.shipBtnText}>Ship Order</AppText>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {ord.status === 'Shipped' && (
-                <TouchableOpacity
-                  style={styles.deliverBtn}
-                  onPress={() =>
-                    dispatch(updateOrderStatus({ id: ord.id, status: 'Delivered' }))
-                  }
+      {/* Tabs Row */}
+      <View style={styles.tabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsScroll}
+        >
+          {STATUS_TABS.map(tab => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tabChip, isActive && styles.tabChipActive]}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.8}
+              >
+                <AppText
+                  style={[styles.tabText, isActive && styles.tabTextActive]}
                 >
-                  <AppText style={styles.deliverBtnText}>Mark Delivered</AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        ))}
+                  {tab}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
-    </ScrollView>
+
+      {/* Orders List Container */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {filteredOrders.length > 0 ? (
+          <View style={styles.ordersBox}>
+            {filteredOrders.map((ord, index) => {
+              const badgeColors = getStatusBadge(ord.status);
+              const formattedId = ord.id.startsWith('ord-')
+                ? ord.id.replace('ord-', '#')
+                : `#${ord.id}`;
+
+              return (
+                <TouchableOpacity
+                  key={ord.id}
+                  style={[
+                    styles.orderRow,
+                    index < filteredOrders.length - 1 && styles.rowDivider,
+                  ]}
+                  onPress={() =>
+                    navigation.navigate('VendorOrderDetails', { order: ord })
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{
+                      uri:
+                        ord.image ||
+                        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+                    }}
+                    style={styles.orderImage}
+                  />
+
+                  <View style={styles.orderMidCol}>
+                    <AppText style={styles.orderNum}>
+                      Order {formattedId}
+                    </AppText>
+                    <AppText style={styles.customerName}>
+                      {ord.customerName}
+                    </AppText>
+                    <AppText style={styles.itemsSub}>
+                      {ord.itemsInfo || `1 Item - $${ord.price}`}
+                    </AppText>
+                  </View>
+
+                  <View style={styles.orderRightCol}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: badgeColors.bg,
+                          borderColor: badgeColors.border,
+                        },
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.statusBadgeText,
+                          { color: badgeColors.text },
+                        ]}
+                      >
+                        {ord.status}
+                      </AppText>
+                    </View>
+                    <AppText style={styles.timeText}>
+                      {ord.time || '1 hour ago'}
+                    </AppText>
+
+                    <View style={styles.arrowCircle}>
+                      <Feather name="chevron-right" size={14} color="#FFFFFF" />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Feather name="file-text" size={48} color="#DEDEDE" />
+            <AppText style={styles.emptyText}>No orders in {activeTab}</AppText>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: Colors.whitebackgroundcolor,
+    backgroundColor: Colors.white,
   },
   header: {
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.graybordercolor,
   },
-  title: {
-    fontSize: 20,
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  placeholderBtn: {
+    width: 40,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  titleText: {
+    fontSize: 22,
+    fontFamily: Fonts.regular,
+    letterSpacing: 4,
+    color: '#000000',
+  },
+  diamondContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    width: 140,
+  },
+  diamondLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#DEDEDE',
+  },
+  diamond: {
+    width: 6,
+    height: 6,
+    borderWidth: 1,
+    borderColor: '#DEDEDE',
+    transform: [{ rotate: '45deg' }],
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 8,
+  },
+  tabsContainer: {
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
+  },
+  tabsScroll: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  tabChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#000000',
+    backgroundColor: Colors.white,
+  },
+  tabChipActive: {
+    backgroundColor: '#DBA83A',
+    borderColor: '#DBA83A',
+  },
+  tabText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: '#000000',
+  },
+  tabTextActive: {
     fontWeight: '700',
-    color: Colors.secondary,
   },
-  sub: {
-    fontSize: 12,
-    color: Colors.lightblack,
-    marginTop: 2,
+  scrollContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 30,
   },
-  list: {
-    padding: 16,
-  },
-  card: {
+  ordersBox: {
     backgroundColor: Colors.white,
     borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
     borderWidth: 1,
-    borderColor: Colors.graybordercolor,
+    borderColor: '#E2E2E2',
+    paddingHorizontal: 16,
   },
-  cardHeader: {
+  orderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 14,
   },
-  ordId: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.secondary,
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+  orderImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: Colors.textinputboxcolor,
   },
-  badgePending: {
-    backgroundColor: Colors.pendingBG,
+  orderMidCol: {
+    flex: 1,
+    marginLeft: 14,
+    justifyContent: 'center',
   },
-  badgeSuccess: {
-    backgroundColor: Colors.greenBG,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.secondary,
-  },
-  prodName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-    marginTop: 6,
-  },
-  customer: {
+  orderNum: {
     fontSize: 13,
-    color: Colors.black,
-    marginTop: 4,
+    fontFamily: Fonts.regular,
+    color: '#000000',
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  address: {
-    fontSize: 12,
-    color: Colors.lightblack,
-    marginTop: 2,
+  customerName: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: '#000000',
+    fontWeight: '700',
+    marginBottom: 2,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  itemsSub: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: '#7C7C7C',
+  },
+  orderRightCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  statusBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  timeText: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: '#7C7C7C',
+    marginBottom: 6,
+  },
+  arrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.graybordercolor,
   },
-  price: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.secondary,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    gap: 12,
   },
-  actionRow: {
-    flexDirection: 'row',
-  },
-  shipBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  shipBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  deliverBtn: {
-    backgroundColor: Colors.green,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  deliverBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.white,
+  emptyText: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: '#7C7C7C',
   },
 });
 

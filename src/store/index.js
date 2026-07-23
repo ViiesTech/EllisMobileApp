@@ -36,12 +36,20 @@ export const reduxStorage = {
 };
 
 // Combine Reducers
-const rootReducer = combineReducers({
+const combinedReducer = combineReducers({
   auth: authReducer,
   product: productReducer,
   booking: bookingReducer,
   order: orderReducer,
 });
+
+const rootReducer = (state, action) => {
+  if (action.type === 'auth/setClearStore') {
+    // Reset state to initial state of all slices
+    state = undefined;
+  }
+  return combinedReducer(state, action);
+};
 
 // Persist Configuration
 const persistConfig = {

@@ -26,4 +26,6 @@ export default {
   inProgress: '#295C00',
   completedBG: '#DCFCE7',
   completed: '#15803D',
+  redDot: 'rgba(247, 85, 85, 1)',
+  borderColor: 'rgba(85, 85, 85, 1)',
 };

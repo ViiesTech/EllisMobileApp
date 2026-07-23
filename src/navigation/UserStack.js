@@ -4,8 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabStack from './TabStack';
 import SelectedLandscaper from '../screens/User/SelectedLandscaper';
 import Measurement from '../screens/User/Booking/Measurement';
-import ProductDetails from '../screens/User/ProductDetails';
 import CartCheckout from '../screens/User/Booking/CartCheckout';
+import ProductDetails from '../screens/Vendor/Product/ProductDetails';
 
 const Stack = createNativeStackNavigator();
 

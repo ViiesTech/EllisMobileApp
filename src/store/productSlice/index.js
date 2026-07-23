@@ -94,6 +94,13 @@ const productSlice = createSlice({
     clearCart: state => {
       state.cart = [];
     },
+    editProduct: (state, action) => {
+      const { id, updates } = action.payload;
+      const index = state.products.findIndex(p => p.id === id);
+      if (index !== -1) {
+        state.products[index] = { ...state.products[index], ...updates };
+      }
+    },
   },
 });
 
@@ -103,6 +110,7 @@ export const {
   removeFromCart,
   updateCartQty,
   clearCart,
+  editProduct,
 } = productSlice.actions;
 
 export const selectProducts = state => state?.product?.products || [];

@@ -1,15 +1,21 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import VendorHome from '../screens/Vendor/VendorHome';
+import Products from '../screens/Vendor/Product/Products';
 import VendorOrders from '../screens/Vendor/VendorOrders';
-import SettingsVendor from '../screens/Vendor/SettingsVendor';
-import AddProduct from '../screens/Vendor/Services/AddProduct';
+import VendorProfile from '../screens/Vendor/VendorProfile';
+import Colors from '../config/Colors';
 
 const Tab = createBottomTabNavigator();
 
 const VendorTabStack = () => {
+  const tabBarLabelStyle = {
+    fontSize: 12,
+    fontWeight: '600',
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -17,16 +23,13 @@ const VendorTabStack = () => {
         tabBarActiveTintColor: '#000000',
         tabBarInactiveTintColor: '#333333',
         tabBarStyle: {
-          backgroundColor: '#DBA83A',
+          backgroundColor: Colors.primary,
           height: 65,
           paddingBottom: 8,
           paddingTop: 8,
           borderTopWidth: 0,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '700',
-        },
+        tabBarLabelStyle: tabBarLabelStyle,
       }}
     >
       <Tab.Screen
@@ -34,18 +37,26 @@ const VendorTabStack = () => {
         component={VendorHome}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => (
-            <Feather name="home" size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={20}
+              color={color}
+            />
           ),
         }}
       />
       <Tab.Screen
         name="VendorProducts"
-        component={AddProduct}
+        component={Products}
         options={{
           tabBarLabel: 'Products',
-          tabBarIcon: ({ color }) => (
-            <Feather name="tag" size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'pricetag' : 'pricetag-outline'}
+              size={20}
+              color={color}
+            />
           ),
         }}
       />
@@ -54,18 +65,26 @@ const VendorTabStack = () => {
         component={VendorOrders}
         options={{
           tabBarLabel: 'Orders',
-          tabBarIcon: ({ color }) => (
-            <Feather name="file-text" size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'document-text' : 'document-text-outline'}
+              size={20}
+              color={color}
+            />
           ),
         }}
       />
       <Tab.Screen
-        name="SettingsVendor"
-        component={SettingsVendor}
+        name="VendorProfile"
+        component={VendorProfile}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <Feather name="user" size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={20}
+              color={color}
+            />
           ),
         }}
       />
