@@ -110,13 +110,7 @@ const TailorProfile = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <VendorHeader
-        navigation={navigation}
-        title="PROFILE"
-        goBack={true}
-        homeHeader={false}
-        notification={false}
-      />
+      <VendorHeader navigation={navigation} title="PROFILE" goBack={false} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -126,12 +120,12 @@ const TailorProfile = ({ navigation }) => {
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
             <Image
+              style={styles.avatarImage}
               source={{
                 uri:
                   userProfile.avatar ||
                   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
               }}
-              style={styles.avatarImage}
             />
           </View>
           <AppText style={styles.userName}>

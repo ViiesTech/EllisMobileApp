@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Home from '../screens/User/Home';
-import SelectLandscaper from '../screens/User/SelectLandscaper';
+import Shop from '../screens/User/Shop';
 import UserBookings from '../screens/User/Booking/UserBookings';
 import UserOrders from '../screens/User/UserOrders';
 import UserProfile from '../screens/User/UserProfile';
@@ -57,7 +57,7 @@ const TabStack = () => {
       />
       <Tab.Screen
         name="Shop"
-        component={SelectLandscaper}
+        component={Shop}
         options={{
           tabBarLabel: 'Shop',
           tabBarIcon: renderTabIcon('bag', 'bag-outline'),
@@ -72,7 +72,7 @@ const TabStack = () => {
         }}
       />
       <Tab.Screen
-        name="Orders"
+        name="UserOrders"
         component={UserOrders}
         options={{
           tabBarLabel: 'Orders',

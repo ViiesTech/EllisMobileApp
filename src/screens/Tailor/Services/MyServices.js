@@ -59,9 +59,7 @@ const MyServices = ({ navigation }) => {
       <VendorHeader
         navigation={navigation}
         title="MY SERVICES"
-        goBack={true}
-        homeHeader={false}
-        notification={false}
+        goBack={false}
       />
 
       <ScrollView

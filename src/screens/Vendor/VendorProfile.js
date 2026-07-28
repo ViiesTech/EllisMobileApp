@@ -91,13 +91,7 @@ const VendorProfile = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <VendorHeader
-        navigation={navigation}
-        title="PROFILE"
-        goBack={true}
-        homeHeader={false}
-        notification={false}
-      />
+      <VendorHeader navigation={navigation} title="PROFILE" goBack={false} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}

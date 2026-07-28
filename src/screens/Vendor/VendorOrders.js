@@ -20,7 +20,7 @@ const VendorOrders = ({ navigation }) => {
   const orders = useSelector(selectOrders);
   const [activeTab, setActiveTab] = useState('New');
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = orders.filter(o => {
     const status = o.status.toLowerCase();
     const tab = activeTab.toLowerCase();
     if (tab === 'new') {
@@ -47,13 +47,7 @@ const VendorOrders = ({ navigation }) => {
 
   return (
     <View style={styles.safeArea}>
-      <VendorHeader
-        navigation={navigation}
-        title="ORDERS"
-        goBack={true}
-        homeHeader={false}
-        notification={false}
-      />
+      <VendorHeader navigation={navigation} title="ORDERS" goBack={false} />
 
       {/* Tabs Row */}
       <View style={styles.tabsContainer}>

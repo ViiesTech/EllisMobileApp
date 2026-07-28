@@ -23,13 +23,7 @@ const Products = ({ navigation }) => {
 
   return (
     <View style={styles.safeArea}>
-      <VendorHeader
-        navigation={navigation}
-        title="PRODUCTS"
-        goBack={handleBack}
-        homeHeader={false}
-        notification={false}
-      />
+      <VendorHeader navigation={navigation} title="PRODUCTS" goBack={false} />
 
       {/* Product List */}
       <ScrollView
