@@ -19,5 +19,30 @@ export const showToast = (title, message, type = 'info') => {
   });
 };
 
+export const showToastError = (title, err) => {
+  let errorMessage = '';
+  if (err?.data?.errors) {
+    const errorsObj = err.data.errors;
+    if (typeof errorsObj === 'object') {
+      const keys = Object.keys(errorsObj);
+      if (keys.length > 0) {
+        const fieldErrors = errorsObj[keys[0]];
+        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+          errorMessage = fieldErrors[0];
+        } else if (typeof fieldErrors === 'string') {
+          errorMessage = fieldErrors;
+        }
+      }
+    }
+  }
+  if (!errorMessage) {
+    errorMessage =
+      err?.data?.message ||
+      err?.message ||
+      'Something went wrong. Please try again.';
+  }
+  showToast(title, errorMessage, 'error');
+};
+
 // This is the component you must include in your App.js
 export default ToastMessage;

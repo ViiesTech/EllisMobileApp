@@ -6,23 +6,23 @@ import {
   useBlurOnFulfill,
   useClearByFocusCell,
 } from 'react-native-confirmation-code-field';
-import Colors from '../../config/Colors';
-import CustomButton from '../../components/CustomButton';
-import AppText from '../../components/AppText';
-import { useDispatch } from 'react-redux';
-import { setToken, setRole, setUser } from '../../store/authSlice';
-import { showToast, showToastError } from '../../components/Toast';
-import { useSignupMutation, useVerifyOtpMutation } from '../../Services/Auth';
+import Colors from '../../../config/Colors';
+import CustomButton from '../../../components/CustomButton';
+import AppText from '../../../components/AppText';
+import { showToast, showToastError } from '../../../components/Toast';
+import {
+  useForgotOTPMutation,
+  useForgotPasswordMutation,
+} from '../../../Services/Auth';
 
 const CELL_COUNT = 6;
 
-const VerifyOTP = ({ navigation, route }) => {
-  const dispatch = useDispatch();
-  const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
-  const [signup] = useSignupMutation();
+const ForgotOTP = ({ navigation, route }) => {
+  const [verifyForgotOtp, { isLoading }] = useForgotOTPMutation();
+  const [resendOtp] = useForgotPasswordMutation();
   const [value, setValue] = useState('');
   const [timer, setTimer] = useState(59);
-  const { email, forgotPassword, payload } = route.params || {};
+  const { email } = route.params || {};
 
   const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
@@ -53,42 +53,16 @@ const VerifyOTP = ({ navigation, route }) => {
         otp: value,
       };
 
-      const response = await verifyOtp(payload).unwrap();
-      console.log('VerifyOTP response:-', response);
+      const response = await verifyForgotOtp(payload).unwrap();
+      console.log('ForgotOTP response:-', response);
 
       if (response?.success) {
-        // Save token to Redux
-        const token = response?.data?.token;
-        if (token) {
-          dispatch(setToken(token));
-        }
-
-        // Save user data to Redux
-        const userData = response?.data?.user;
-        if (userData) {
-          dispatch(setUser(userData));
-        }
-
-        // Map API role to Redux role format and save
-        const apiRole = response?.data?.user?.role?.slug?.toUpperCase();
-        if (apiRole) {
-          dispatch(setRole(apiRole));
-        }
         showToast(
           'Success',
           response?.message || 'OTP verified successfully',
           'success',
         );
-
-        if (forgotPassword) {
-          navigation.navigate('SetPassword', { email });
-        } else if (apiRole === 'VENDOR') {
-          navigation.navigate('VendorCompleteProfile');
-        } else if (apiRole === 'TAILOR') {
-          navigation.navigate('TailorCompleteProfile');
-        } else {
-          navigation.navigate('Login');
-        }
+        navigation.navigate('SetPassword', { email });
       } else {
         showToast(
           'Error',
@@ -97,20 +71,28 @@ const VerifyOTP = ({ navigation, route }) => {
         );
       }
     } catch (err) {
-      console.log('VerifyOTP error:-', err);
+      console.log('ForgotOTP error:-', err);
       showToastError('Verification Failed', err);
     }
   };
 
   const handleResend = async () => {
-    const res = await signup(payload).unwrap();
-    if (res?.success) {
-      showToast('Success', 'Verification code sent successfully', 'success');
-
-      setValue('');
-      setTimer(59);
-    } else {
-      showToast('API Error', 'OTP Not Sent', 'error');
+    try {
+      const res = await resendOtp({ email }).unwrap();
+      if (res?.success) {
+        showToast(
+          'Success',
+          res?.message || 'Verification code sent successfully',
+          'success',
+        );
+        setValue('');
+        setTimer(59);
+      } else {
+        showToast('Error', res?.message || 'OTP Not Sent', 'error');
+      }
+    } catch (err) {
+      console.log('Resend OTP error:-', err);
+      showToastError('Error', err);
     }
   };
 
@@ -124,11 +106,11 @@ const VerifyOTP = ({ navigation, route }) => {
       >
         {/* Title & Subtitle */}
         <View style={styles.header}>
-          <AppText style={styles.title}>Verify Account</AppText>
+          <AppText style={styles.title}>Verify Code</AppText>
           <AppText style={styles.sub}>
-            Code has been send to{' '}
+            Code has been sent to{' '}
             <AppText style={styles.emailText}>{email}.</AppText>
-            {'\n'}Enter the code to verify your account.
+            {'\n'}Enter the code to reset your password.
           </AppText>
         </View>
 
@@ -182,7 +164,7 @@ const VerifyOTP = ({ navigation, route }) => {
         {/* Bottom Button */}
         <View style={styles.bottomArea}>
           <CustomButton
-            title="Verify Account"
+            title="Verify Code"
             onPress={handleVerify}
             loading={isLoading}
           />
@@ -295,4 +277,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VerifyOTP;
+export default ForgotOTP;

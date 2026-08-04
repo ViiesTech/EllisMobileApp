@@ -5,20 +5,80 @@ import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
 import AppText from '../../components/AppText';
 import { useDispatch } from 'react-redux';
-import { setToken } from '../../store/authSlice';
+import { setToken, setRole, setUser } from '../../store/authSlice';
+import { useLoginMutation } from '../../Services/Auth';
+import { showToast, showToastError } from '../../components/Toast';
 
 const Login = ({ navigation }) => {
   const dispatch = useDispatch();
+  const [login, { isLoading }] = useLoginMutation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const handleLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      dispatch(setToken('auth_token_active'));
-    }, 600);
+  const validate = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async () => {
+    if (!validate()) return;
+
+    try {
+      const payload = {
+        email: email.trim(),
+        password: password,
+      };
+
+      const response = await login(payload).unwrap();
+      console.log('Login response:-', response);
+
+      if (response?.success) {
+        // Save token to Redux
+        const token = response?.data?.token;
+        if (token) {
+          dispatch(setToken(token));
+        }
+
+        // Save user data to Redux
+        const userData = response?.data;
+        if (userData) {
+          dispatch(setUser(userData));
+        }
+
+        // Map API role to Redux role format and save
+        const apiRole = response?.data?.role?.slug?.toUpperCase();
+        if (apiRole) {
+          dispatch(setRole(apiRole));
+        }
+
+        showToast(
+          'Success',
+          response?.message || 'Login successful',
+          'success',
+        );
+      } else {
+        showToast('Error', response?.message || 'Login failed', 'error');
+      }
+    } catch (err) {
+      console.log('Login error:-', err);
+      showToastError('Login Failed', err);
+    }
   };
 
   return (
@@ -38,19 +98,31 @@ const Login = ({ navigation }) => {
             label="Email"
             leftIcon="mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={text => {
+              setEmail(text);
+              if (errors.email) {
+                setErrors(prev => ({ ...prev, email: null }));
+              }
+            }}
             placeholder="your@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
+            error={errors.email}
           />
 
           <TextField
             label="Password"
             leftIcon="lock"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={text => {
+              setPassword(text);
+              if (errors.password) {
+                setErrors(prev => ({ ...prev, password: null }));
+              }
+            }}
             placeholder="••••••••"
             secureTextEntry
+            error={errors.password}
           />
 
           <TouchableOpacity
@@ -64,7 +136,11 @@ const Login = ({ navigation }) => {
 
         {/* Bottom Button */}
         <View style={styles.bottomArea}>
-          <CustomButton title="Login" onPress={handleLogin} loading={loading} />
+          <CustomButton
+            title="Login"
+            onPress={handleLogin}
+            loading={isLoading}
+          />
 
           <View style={styles.signupRow}>
             <AppText style={styles.noAccountText}>
@@ -139,7 +215,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'serif',
     color: '#000000',
-    // textDecorationLine: 'underline',
   },
 });
 

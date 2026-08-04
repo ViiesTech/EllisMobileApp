@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import Colors from '../../config/Colors';
 import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
@@ -39,86 +39,91 @@ const TailorCompleteProfile = ({ navigation }) => {
 
   return (
     <View style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        {/* Title */}
-        <View style={styles.header}>
-          <AppText style={styles.title}>Profile Setup</AppText>
-        </View>
-
-        {/* Form Fields */}
-        <View style={styles.form}>
-          <TextField
-            label="Full Name"
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Alex"
-          />
-
-          <TextField
-            label="Email"
-            leftIcon="mail"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="your@email.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <TextField
-            label="Number"
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="+123-456-7890"
-            keyboardType="phone-pad"
-          />
-
-          <TextField
-            label="City"
-            value={city}
-            onChangeText={setCity}
-            placeholder="New York"
-          />
-
-          <TextField
-            label="Address"
-            value={address}
-            onChangeText={setAddress}
-            placeholder="New York"
-          />
-
-          <TextField
-            label="Experience"
-            value={experience}
-            onChangeText={setExperience}
-            placeholder="8 Years"
-          />
-
-          {/* Services Offered Dropdown */}
-          <View style={styles.dropdownContainer}>
-            <AppText style={styles.dropdownLabel}>Services Offered</AppText>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={SERVICES_DATA}
-              maxHeight={200}
-              labelField="label"
-              valueField="value"
-              placeholder="Select Service"
-              value={service}
-              onChange={item => setService(item.value)}
-            />
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Title */}
+          <View style={styles.header}>
+            <AppText style={styles.title}>Profile Setup</AppText>
           </View>
-        </View>
 
-        {/* Bottom Button */}
-        <View style={styles.bottomArea}>
-          <CustomButton title="Continue" onPress={handleContinue} />
-        </View>
-      </ScrollView>
+          {/* Form Fields */}
+          <View style={styles.form}>
+            <TextField
+              label="Full Name"
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Alex"
+            />
+
+            <TextField
+              label="Email"
+              leftIcon="mail"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="your@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TextField
+              label="Number"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="+123-456-7890"
+              keyboardType="phone-pad"
+            />
+
+            <TextField
+              label="City"
+              value={city}
+              onChangeText={setCity}
+              placeholder="New York"
+            />
+
+            <TextField
+              label="Address"
+              value={address}
+              onChangeText={setAddress}
+              placeholder="New York"
+            />
+
+            <TextField
+              label="Experience"
+              value={experience}
+              onChangeText={setExperience}
+              placeholder="8 Years"
+            />
+
+            {/* Services Offered Dropdown */}
+            <View style={styles.dropdownContainer}>
+              <AppText style={styles.dropdownLabel}>Services Offered</AppText>
+              <Dropdown
+                style={styles.dropdown}
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                data={SERVICES_DATA}
+                maxHeight={200}
+                labelField="label"
+                valueField="value"
+                placeholder="Select Service"
+                value={service}
+                onChange={item => setService(item.value)}
+              />
+            </View>
+          </View>
+
+          {/* Bottom Button */}
+          <View style={styles.bottomArea}>
+            <CustomButton title="Continue" onPress={handleContinue} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -127,6 +132,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  keyboardView: {
+    flex: 1,
   },
   container: {
     flexGrow: 1,

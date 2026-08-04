@@ -7,6 +7,9 @@ import {
   Image,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -15,12 +18,16 @@ import Fonts from '../../../config/Fonts';
 import TextField from '../../../components/TextField';
 import AppText from '../../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
-import { addProduct, editProduct } from '../../../store/productSlice';
+import { addProduct } from '../../../store/productSlice';
 import VendorHeader from '../../../components/VendorHeader';
+import { useAddProductMutation } from '../../../Services/VendorServices';
+import { showToast, showToastError } from '../../../components/Toast';
 
 const AddProduct = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const editingProduct = route.params?.product;
+
+  const [addProductMutation, { isLoading }] = useAddProductMutation();
 
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
@@ -39,51 +46,107 @@ const AddProduct = ({ route, navigation }) => {
     editingProduct?.material || 'Pure Silk / Wool',
   );
   const [color, setColor] = useState(editingProduct?.color || 'Olive Green');
-  const [imageUri, setImageUri] = useState(editingProduct?.image || '');
+
+  const initialImages = editingProduct?.images
+    ? editingProduct.images
+    : editingProduct?.image
+    ? [editingProduct.image]
+    : [];
+  const [images, setImages] = useState(initialImages);
 
   const [catModalVisible, setCatModalVisible] = useState(false);
 
   const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
-      if (response.didCancel) return;
-      if (response.errorMessage) {
-        console.log('ImagePicker Error: ', response.errorMessage);
-        return;
-      }
-      if (response.assets && response.assets.length > 0) {
-        setImageUri(response.assets[0].uri);
-      }
-    });
+    launchImageLibrary(
+      { mediaType: 'photo', selectionLimit: 0, quality: 0.8 },
+      response => {
+        if (response.didCancel) return;
+        if (response.errorMessage) {
+          console.log('ImagePicker Error: ', response.errorMessage);
+          return;
+        }
+        if (response.assets && response.assets.length > 0) {
+          const newPicked = response.assets.map(asset => ({
+            uri: asset.uri,
+            fileName:
+              asset.fileName ||
+              `image_${Date.now()}_${Math.random()
+                .toString(36)
+                .substring(7)}.jpg`,
+            type: asset.type || 'image/jpeg',
+          }));
+          setImages(prev => [...prev, ...newPicked]);
+        }
+      },
+    );
   };
 
-  const handleSubmit = () => {
-    if (!name || !price) return;
+  const handleRemoveImage = indexToRemove => {
+    setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
-    const productData = {
-      name,
-      price: parseFloat(price) || 0,
-      category,
-      description,
-      stock: parseInt(stock, 10) || 1,
-      material,
-      image:
-        imageUri ||
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-      color,
-    };
-
-    if (editingProduct) {
-      dispatch(
-        editProduct({
-          id: editingProduct.id,
-          updates: productData,
-        }),
-      );
-    } else {
-      dispatch(addProduct(productData));
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      showToast('Validation Error', 'Please enter fabric name', 'error');
+      return;
+    }
+    if (!price.trim()) {
+      showToast('Validation Error', 'Please enter price per meter', 'error');
+      return;
     }
 
-    navigation.goBack();
+    try {
+      const formData = new FormData();
+      formData.append('name', name.trim());
+      formData.append('category', category.trim());
+      formData.append('description', description.trim());
+      formData.append('price_per_meter', price.trim());
+      formData.append('available_stock', stock.trim());
+      formData.append('color', color.trim());
+      formData.append('material', material.trim());
+
+      images.forEach((img, index) => {
+        const imgUri = typeof img === 'string' ? img : img.uri;
+        if (
+          imgUri &&
+          !imgUri.startsWith('http') &&
+          !imgUri.startsWith('https')
+        ) {
+          formData.append('images[]', {
+            uri:
+              Platform.OS === 'android'
+                ? imgUri
+                : imgUri.replace('file://', ''),
+            name: img.fileName || `product_${index}.jpg`,
+            type: img.type || 'image/jpeg',
+          });
+        }
+      });
+
+      const response = await addProductMutation(formData).unwrap();
+      console.log('addProduct response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Product created successfully.',
+          'success',
+        );
+        if (response?.data) {
+          dispatch(addProduct(response.data));
+        }
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to create product.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('addProduct error:-', err);
+      showToastError('Error', err);
+    }
   };
 
   const categories = ['Fabrics', 'Suits', 'Shirts', 'Trousers'];
@@ -98,115 +161,154 @@ const AddProduct = ({ route, navigation }) => {
         notification={false}
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        {/* Upload Image Box */}
-        <TouchableOpacity
-          style={styles.imageUploadBox}
-          onPress={handlePickImage}
-          activeOpacity={0.8}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
         >
-          {imageUri ? (
-            <>
-              <Image source={{ uri: imageUri }} style={styles.uploadedImage} />
-              <View style={styles.changeBadge}>
-                <AppText style={styles.changeText}>Change Image</AppText>
-              </View>
-            </>
-          ) : (
-            <View style={styles.uploadInner}>
-              <View style={styles.uploadIconCircle}>
-                <Feather name="image" size={32} color="#1A1A1A" />
-                <View style={styles.uploadArrowBadge}>
-                  <Feather name="arrow-up" size={10} color="#FFFFFF" />
+          {/* Upload Image Box / Multi-Image List */}
+          {images.length === 0 ? (
+            <TouchableOpacity
+              style={styles.imageUploadBox}
+              onPress={handlePickImage}
+              activeOpacity={0.8}
+            >
+              <View style={styles.uploadInner}>
+                <View style={styles.uploadIconCircle}>
+                  <Feather name="image" size={32} color="#1A1A1A" />
+                  <View style={styles.uploadArrowBadge}>
+                    <Feather name="arrow-up" size={10} color="#FFFFFF" />
+                  </View>
                 </View>
+                <AppText style={styles.uploadText}>Upload Images</AppText>
               </View>
-              <AppText style={styles.uploadText}>Upload Image</AppText>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.imagesContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imagesList}
+              >
+                {images.map((img, index) => {
+                  const uri = typeof img === 'string' ? img : img.uri;
+                  return (
+                    <View key={index} style={styles.imageThumbWrapper}>
+                      <Image source={{ uri }} style={styles.thumbImage} />
+                      <TouchableOpacity
+                        style={styles.removeImageBadge}
+                        onPress={() => handleRemoveImage(index)}
+                        activeOpacity={0.8}
+                      >
+                        <Feather name="x" size={14} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+                <TouchableOpacity
+                  style={styles.addMoreBox}
+                  onPress={handlePickImage}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="plus" size={24} color="#1A1A1A" />
+                  <AppText style={styles.addMoreText}>Add More</AppText>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
           )}
-        </TouchableOpacity>
 
-        {/* Form Fields */}
-        <TextField
-          label="Fabric Name"
-          value={name}
-          onChangeText={setName}
-          placeholder="Cotton"
-        />
-
-        {/* Category Trigger Field */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => setCatModalVisible(true)}
-        >
-          <View pointerEvents="none">
-            <TextField
-              label="Category"
-              value={category}
-              placeholder="Lorem ipsum"
-            />
-          </View>
-        </TouchableOpacity>
-
-        <TextField
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Lorem ipsum"
-          multiline
-        />
-
-        <TextField
-          label="Price per Meter"
-          value={price}
-          onChangeText={setPrice}
-          placeholder="$30"
-          keyboardType="numeric"
-        />
-
-        <TextField
-          label="Available Stock"
-          value={stock}
-          onChangeText={setStock}
-          placeholder="Yes"
-          keyboardType="numeric"
-        />
-
-        <TextField
-          label="Color"
-          value={color}
-          onChangeText={setColor}
-          placeholder="Olive Green"
-        />
-
-        <TextField
-          label="Material"
-          value={material}
-          onChangeText={setMaterial}
-          placeholder="Lorem ipsum"
-        />
-      </ScrollView>
-
-      {/* Save Button */}
-      <View style={styles.bottomBtnContainer}>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSubmit}
-          activeOpacity={0.8}
-        >
-          <AppText style={styles.saveButtonText}>
-            {editingProduct ? 'Update Product Details' : 'Add New Product'}
-          </AppText>
-          <Feather
-            name="arrow-right"
-            size={20}
-            color="#000000"
-            style={styles.arrowIcon}
+          {/* Form Fields */}
+          <TextField
+            label="Fabric Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Cotton"
           />
-        </TouchableOpacity>
-      </View>
+
+          {/* Category Trigger Field */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => setCatModalVisible(true)}
+          >
+            <View pointerEvents="none">
+              <TextField
+                label="Category"
+                value={category}
+                placeholder="Lorem ipsum"
+              />
+            </View>
+          </TouchableOpacity>
+
+          <TextField
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Lorem ipsum"
+            multiline
+          />
+
+          <TextField
+            label="Price per Meter"
+            value={price}
+            onChangeText={setPrice}
+            placeholder="$30"
+            keyboardType="numeric"
+          />
+
+          <TextField
+            label="Available Stock"
+            value={stock}
+            onChangeText={setStock}
+            placeholder="Yes"
+            keyboardType="numeric"
+          />
+
+          <TextField
+            label="Color"
+            value={color}
+            onChangeText={setColor}
+            placeholder="Olive Green"
+          />
+
+          <TextField
+            label="Material"
+            value={material}
+            onChangeText={setMaterial}
+            placeholder="Lorem ipsum"
+          />
+        </ScrollView>
+
+        {/* Save Button */}
+        <View style={styles.bottomBtnContainer}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSubmit}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <>
+                <AppText style={styles.saveButtonText}>
+                  {editingProduct
+                    ? 'Update Product Details'
+                    : 'Add New Product'}
+                </AppText>
+                <Feather
+                  name="arrow-right"
+                  size={20}
+                  color="#000000"
+                  style={styles.arrowIcon}
+                />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
       {/* Category Selection Modal */}
       <Modal
@@ -259,6 +361,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  keyboardView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -324,6 +429,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     overflow: 'hidden',
+  },
+  imagesContainer: {
+    marginBottom: 24,
+  },
+  imagesList: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageThumbWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: 14,
+    marginRight: 12,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  removeImageBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMoreBox: {
+    width: 100,
+    height: 100,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DEDEDE',
+    borderStyle: 'dashed',
+    backgroundColor: '#F8F9FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMoreText: {
+    fontSize: 12,
+    color: '#1A1A1A',
+    marginTop: 4,
+    fontFamily: Fonts.regular,
   },
   uploadInner: {
     justifyContent: 'center',

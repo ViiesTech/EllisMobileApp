@@ -2,27 +2,45 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
-import { selectRole, selectToken } from '../store/authSlice';
+import {
+  selectBusinessProfile,
+  selectRole,
+  selectToken,
+  selectUser,
+} from '../store/authSlice';
 
 import AuthStack from './AuthStack';
 import UserStack from './UserStack';
 import VendorStack from './VendorStack';
 import TailorStack from './TailorStack';
+import VendorCompleteProfile from '../screens/Auth/VendorCompleteProfile';
 
 const Stack = createNativeStackNavigator();
 
 const Routes = () => {
   const token = useSelector(selectToken);
   const role = useSelector(selectRole);
+  const user = useSelector(selectUser);
+  const businessProfile = useSelector(selectBusinessProfile);
+  const isBusinessProfile =
+    user?.is_business_profile || businessProfile?.is_business_profile;
 
   console.log('Token:-', token);
+  console.log('User:-', user);
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!token ? (
           <Stack.Screen name="AuthStack" component={AuthStack} />
         ) : role === 'VENDOR' ? (
-          <Stack.Screen name="VendorStack" component={VendorStack} />
+          !isBusinessProfile ? (
+            <Stack.Screen
+              name="VendorCompleteProfile"
+              component={VendorCompleteProfile}
+            />
+          ) : (
+            <Stack.Screen name="VendorStack" component={VendorStack} />
+          )
         ) : role === 'TAILOR' ? (
           <Stack.Screen name="TailorStack" component={TailorStack} />
         ) : (

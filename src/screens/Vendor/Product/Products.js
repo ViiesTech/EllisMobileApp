@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import Colors from '../../../config/Colors';
@@ -13,12 +15,74 @@ import AppText from '../../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import { selectProducts } from '../../../store/productSlice';
 import VendorHeader from '../../../components/VendorHeader';
+import { useGetMyProductsQuery } from '../../../Services/VendorServices';
 
 const Products = ({ navigation }) => {
-  const products = useSelector(selectProducts);
+  const [page, setPage] = useState(1);
+  const [allProducts, setAllProducts] = useState([]);
+  const [lastPage, setLastPage] = useState(1);
 
-  const handleBack = () => {
-    navigation.goBack();
+  const {
+    data: apiResponse,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useGetMyProductsQuery({ page });
+
+  const reduxProducts = useSelector(selectProducts);
+
+  const getProductImage = prod => {
+    let imgSource = null;
+
+    if (Array.isArray(prod?.image) && prod.image.length > 0) {
+      imgSource = prod.image[0];
+    } else if (typeof prod?.image === 'string' && prod.image.trim() !== '') {
+      imgSource = prod.image;
+    } else if (Array.isArray(prod?.images) && prod.images.length > 0) {
+      const first = prod.images[0];
+      imgSource = typeof first === 'string' ? first : first?.uri;
+    } else if (typeof prod?.images === 'string' && prod.images.trim() !== '') {
+      imgSource = prod.images;
+    }
+
+    if (!imgSource) {
+      return 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80';
+    }
+    return imgSource;
+  };
+
+  useEffect(() => {
+    if (apiResponse?.data && Array.isArray(apiResponse.data)) {
+      if (page === 1) {
+        setAllProducts(apiResponse.data);
+      } else {
+        setAllProducts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newItems = apiResponse.data.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newItems];
+        });
+      }
+    } else if (reduxProducts && reduxProducts.length > 0) {
+      setAllProducts(prev => (prev.length === 0 ? reduxProducts : prev));
+    }
+
+    if (apiResponse?.meta?.last_page) {
+      setLastPage(apiResponse.meta.last_page);
+    }
+  }, [apiResponse, page, reduxProducts]);
+
+  const handleRefresh = () => {
+    if (page === 1) {
+      refetch();
+    } else {
+      setPage(1);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!isFetching && page < lastPage) {
+      setPage(prev => prev + 1);
+    }
   };
 
   return (
@@ -26,37 +90,68 @@ const Products = ({ navigation }) => {
       <VendorHeader navigation={navigation} title="PRODUCTS" goBack={false} />
 
       {/* Product List */}
-      <ScrollView
+      <FlatList
+        data={allProducts}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
-      >
-        {products.map(prod => (
-          <TouchableOpacity
-            key={prod.id}
-            style={styles.productCard}
-            onPress={() =>
-              navigation.navigate('ProductDetails', { product: prod })
-            }
-            activeOpacity={0.9}
-          >
-            <Image source={{ uri: prod.image }} style={styles.productImage} />
-
-            <View style={styles.productInfo}>
-              <AppText style={styles.productName} numberOfLines={1}>
-                {prod.name}
-              </AppText>
-              <AppText style={styles.productDesc} numberOfLines={3}>
-                {prod.description || 'No description available.'}
-              </AppText>
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching && page === 1}
+            onRefresh={handleRefresh}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#DBA83A" />
             </View>
-
-            <View style={styles.priceContainer}>
-              <AppText style={styles.priceText}>${prod.price}</AppText>
-              <AppText style={styles.priceUnit}>Per Meter</AppText>
+          ) : (
+            <View style={styles.centerContainer}>
+              <AppText style={styles.emptyText}>No products found.</AppText>
             </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+          )
+        }
+        ListFooterComponent={
+          isFetching && page > 1 ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color="#DBA83A" />
+            </View>
+          ) : null
+        }
+        renderItem={({ item: prod }) => {
+          const priceVal = prod.price_per_meter || prod.price || '0';
+          const imgUri = getProductImage(prod);
+
+          return (
+            <TouchableOpacity
+              style={styles.productCard}
+              onPress={() =>
+                navigation.navigate('ProductDetails', { product: prod })
+              }
+              activeOpacity={0.9}
+            >
+              <Image source={{ uri: imgUri }} style={styles.productImage} />
+
+              <View style={styles.productInfo}>
+                <AppText style={styles.productName} numberOfLines={1}>
+                  {prod.name}
+                </AppText>
+                <AppText style={styles.productDesc} numberOfLines={3}>
+                  {prod.description || 'No description available.'}
+                </AppText>
+              </View>
+
+              <View style={styles.priceContainer}>
+                <AppText style={styles.priceText}>${priceVal}</AppText>
+                <AppText style={styles.priceUnit}>Per Meter</AppText>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
 
       {/* Bottom Add Product Button */}
       <View style={styles.bottomBtnContainer}>
@@ -136,6 +231,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 100, // Space for bottom floating button
+  },
+  centerContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: '#7C7C7C',
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   productCard: {
     flexDirection: 'row',

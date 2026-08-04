@@ -13,14 +13,16 @@ import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
 import VendorHeader from '../../components/VendorHeader';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUser, setUserProfile } from '../../store/authSlice';
-import { showToast } from '../../components/Toast';
+import { selectUser, setUser } from '../../store/authSlice';
+import { showToast, showToastError } from '../../components/Toast';
+import { useVendorUpdateProfileMutation } from '../../Services/Auth';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const VendorEditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
+  const [vendorUpdateProfile, { isLoading }] = useVendorUpdateProfileMutation();
 
   // Split full name into first and last name
   const nameParts = (userProfile.name || '').trim().split(/\s+/);
@@ -47,7 +49,7 @@ const VendorEditProfile = ({ navigation }) => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firstName.trim()) {
       showToast('Validation Error', 'First name cannot be empty.', 'error');
       return;
@@ -56,23 +58,64 @@ const VendorEditProfile = ({ navigation }) => {
       showToast('Validation Error', 'Last name cannot be empty.', 'error');
       return;
     }
-    if (!email.trim()) {
-      showToast('Validation Error', 'Email cannot be empty.', 'error');
-      return;
+
+    try {
+      const formData = new FormData();
+      formData.append('name', firstName.trim());
+      formData.append('last_name', lastName.trim());
+
+      if (imageUri && !imageUri.startsWith('http') && !imageUri.startsWith('https')) {
+        const uriParts = imageUri.split('/');
+        const fileName = uriParts[uriParts.length - 1] || 'profile.jpg';
+        formData.append('profile_image', {
+          uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+          name: fileName,
+          type: 'image/jpeg',
+        });
+      }
+
+      const response = await vendorUpdateProfile(formData).unwrap();
+      console.log('vendorUpdateProfile response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Profile changes saved successfully.',
+          'success',
+        );
+
+        const updatedUser = response?.data?.user;
+        const updatedVendor = response?.data?.vendor;
+
+        // Build new user profile object for Redux store
+        const newUserObj = {
+          ...userProfile,
+          name: `${updatedUser?.name || ''} ${updatedUser?.last_name || ''}`.trim(),
+          avatar: updatedVendor?.profile_image || userProfile.avatar,
+        };
+
+        // Update nested user object if it exists in store
+        if (userProfile.user) {
+          newUserObj.user = {
+            ...userProfile.user,
+            name: updatedUser?.name || userProfile.user.name,
+            last_name: updatedUser?.last_name || userProfile.user.last_name,
+          };
+        }
+
+        dispatch(setUser(newUserObj));
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Profile update failed',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('vendorUpdateProfile error:-', err);
+      showToastError('Error', err);
     }
-
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    dispatch(
-      setUserProfile({
-        ...userProfile,
-        name: fullName,
-        email: email.trim(),
-        avatar: imageUri,
-      }),
-    );
-
-    showToast('Success', 'Profile changes saved successfully.', 'success');
-    navigation.goBack();
   };
 
   return (
@@ -142,6 +185,7 @@ const VendorEditProfile = ({ navigation }) => {
             title="Save Changes"
             onPress={handleSave}
             hasArrow={true}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

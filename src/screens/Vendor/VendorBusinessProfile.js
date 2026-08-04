@@ -11,28 +11,32 @@ import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
 import VendorHeader from '../../components/VendorHeader';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUser, setUserProfile } from '../../store/authSlice';
-import { showToast } from '../../components/Toast';
+import {
+  selectBusinessProfile,
+  setBusinessProfile,
+} from '../../store/authSlice';
+import { showToast, showToastError } from '../../components/Toast';
+import { useVendorBusinessProfileMutation } from '../../Services/Auth';
 
 const VendorBusinessProfile = ({ navigation }) => {
   const dispatch = useDispatch();
-  const userProfile = useSelector(selectUser) || {};
+  const businessProfile = useSelector(selectBusinessProfile) || {};
+  const [vendorBusinessProfile, { isLoading }] =
+    useVendorBusinessProfileMutation();
 
   const [businessName, setBusinessName] = useState(
-    userProfile.businessName || 'Alex',
+    businessProfile.business_name,
   );
   const [businessEmail, setBusinessEmail] = useState(
-    userProfile.businessEmail || 'your@email.com',
+    businessProfile.business_email,
   );
   const [businessPhone, setBusinessPhone] = useState(
-    userProfile.businessPhone || '+123-456-7890',
+    businessProfile.business_phone,
   );
-  const [city, setCity] = useState(userProfile.city || 'New York');
-  const [address, setAddress] = useState(
-    userProfile.businessAddress || 'New York',
-  );
+  const [city, setCity] = useState(businessProfile.city);
+  const [address, setAddress] = useState(businessProfile.address);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!businessName.trim()) {
       showToast('Validation Error', 'Business name cannot be empty.', 'error');
       return;
@@ -66,21 +70,40 @@ const VendorBusinessProfile = ({ navigation }) => {
       return;
     }
 
-    dispatch(
-      setUserProfile({
-        ...userProfile,
-        businessName: businessName.trim(),
-        businessEmail: businessEmail.trim(),
-        businessPhone: businessPhone.trim(),
+    try {
+      const payload = {
+        business_name: businessName.trim(),
+        business_email: businessEmail.trim(),
+        business_phone: businessPhone.trim(),
         city: city.trim(),
-        businessAddress: address.trim(),
-      }),
-    );
+        address: address.trim(),
+      };
 
-    showToast('Success', 'Business profile saved successfully.', 'success');
-    navigation.goBack();
+      const response = await vendorBusinessProfile(payload).unwrap();
+      console.log('vendorBusinessProfile response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Business profile saved successfully.',
+          'success',
+        );
+        dispatch(setBusinessProfile(response?.data?.vendor));
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to save business profile',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('vendorBusinessProfile error:-', err);
+      showToastError('Error', err);
+    }
   };
 
+  console.log('businessProfile:-', businessProfile);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -139,6 +162,7 @@ const VendorBusinessProfile = ({ navigation }) => {
             title="Save Changes"
             onPress={handleSave}
             hasArrow={true}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

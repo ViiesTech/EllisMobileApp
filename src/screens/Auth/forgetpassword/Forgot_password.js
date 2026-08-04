@@ -4,20 +4,56 @@ import Colors from '../../../config/Colors';
 import TextField from '../../../components/TextField';
 import CustomButton from '../../../components/CustomButton';
 import AppText from '../../../components/AppText';
-import { showToast } from '../../../components/Toast';
+import { showToast, showToastError } from '../../../components/Toast';
+import { useForgotPasswordMutation } from '../../../Services/Auth';
 
 const Forgot_password = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [errors, setErrors] = useState({});
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
 
-  const handleContinue = () => {
-    if (email?.trim() === '') {
-      showToast('Validation Error', 'Please enter your email', 'info');
-      return;
+  const validate = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
     }
-    navigation.navigate('VerifyOTP', {
-      email: email,
-      forgotPassword: true,
-    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleContinue = async () => {
+    if (!validate()) return;
+
+    try {
+      const payload = { email: email.trim() };
+      const response = await forgotPassword(payload).unwrap();
+      console.log('ForgotPassword response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'OTP sent to your email',
+          'success',
+        );
+        navigation.navigate('ForgotOTP', {
+          email: email.trim(),
+        });
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to send OTP',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('ForgotPassword error:-', err);
+      showToastError('Error', err);
+    }
   };
 
   return (
@@ -40,16 +76,26 @@ const Forgot_password = ({ navigation }) => {
           <TextField
             label="E-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={text => {
+              setEmail(text);
+              if (errors.email) {
+                setErrors(prev => ({ ...prev, email: null }));
+              }
+            }}
             placeholder="Enter Your Email"
             keyboardType="email-address"
             autoCapitalize="none"
+            error={errors.email}
           />
         </View>
 
         {/* Bottom Button */}
         <View style={styles.bottomArea}>
-          <CustomButton title="Continue" onPress={handleContinue} />
+          <CustomButton
+            title="Continue"
+            onPress={handleContinue}
+            loading={isLoading}
+          />
         </View>
       </ScrollView>
     </View>
@@ -65,7 +111,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: Colors.white,
     paddingHorizontal: 24,
-    // justifyContent: 'space-between',
     paddingBottom: 30,
   },
   header: {

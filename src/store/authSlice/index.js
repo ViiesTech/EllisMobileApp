@@ -11,6 +11,7 @@ const initialState = {
     accountStatus: 'Approved',
   },
   token: null,
+  businessProfile: null,
   role: 'USER',
 };
 
@@ -18,6 +19,9 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    setBusinessProfile: (state, action) => {
+      state.businessProfile = action.payload;
+    },
     setUser: (state, action) => {
       state.user = action.payload;
     },
@@ -36,11 +40,18 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUser, setUserProfile, setToken, setRole, setClearStore } =
-  authSlice.actions;
+export const {
+  setUser,
+  setUserProfile,
+  setToken,
+  setRole,
+  setClearStore,
+  setBusinessProfile,
+} = authSlice.actions;
 
 export const selectUser = state => state?.auth?.user;
 export const selectToken = state => state?.auth?.token;
 export const selectRole = state => state?.auth?.role;
+export const selectBusinessProfile = state => state?.auth?.businessProfile;
 
 export default authSlice.reducer;

@@ -9,6 +9,7 @@ import SignUp from '../screens/Auth/Signup';
 import VerifyOTP from '../screens/Auth/VerifyOTP';
 import EmailVerification from '../screens/Auth/EmailVerification';
 import ForgetPassword from '../screens/Auth/forgetpassword/Forgot_password';
+import ForgotOTP from '../screens/Auth/forgetpassword/ForgotOTP';
 import SetPassword from '../screens/Auth/SetPassword';
 import VendorCompleteProfile from '../screens/Auth/VendorCompleteProfile';
 import TailorCompleteProfile from '../screens/Auth/TailorCompleteProfile';
@@ -30,6 +31,7 @@ const AuthStack = () => {
       <Stack.Screen name="VerifyOTP" component={VerifyOTP} />
       <Stack.Screen name="EmailVerification" component={EmailVerification} />
       <Stack.Screen name="Forgot_password" component={ForgetPassword} />
+      <Stack.Screen name="ForgotOTP" component={ForgotOTP} />
       <Stack.Screen name="SetPassword" component={SetPassword} />
       <Stack.Screen
         name="VendorCompleteProfile"
@@ -45,3 +47,4 @@ const AuthStack = () => {
 };
 
 export default AuthStack;
+

@@ -13,6 +13,7 @@ import BankAccount from '../screens/CommonScreens/BankAccount';
 import AddBankAccount from '../screens/CommonScreens/AddBankAccount';
 import PrivacyPolicy from '../screens/CommonScreens/PrivacyPolicy';
 import TermsAndCoditions from '../screens/CommonScreens/TermsAndCoditions';
+import UnderReview from '../screens/Auth/UnderReview';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,11 +27,15 @@ const VendorStack = () => {
       <Stack.Screen name="ProductDetails" component={ProductDetails} />
       <Stack.Screen name="VendorOrderDetails" component={VendorOrderDetails} />
       <Stack.Screen name="VendorEditProfile" component={VendorEditProfile} />
-      <Stack.Screen name="VendorBusinessProfile" component={VendorBusinessProfile} />
+      <Stack.Screen
+        name="VendorBusinessProfile"
+        component={VendorBusinessProfile}
+      />
       <Stack.Screen name="BankAccount" component={BankAccount} />
       <Stack.Screen name="AddBankAccount" component={AddBankAccount} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
       <Stack.Screen name="TermsAndCoditions" component={TermsAndCoditions} />
+      <Stack.Screen name="UnderReview" component={UnderReview} />
     </Stack.Navigator>
   );
 };

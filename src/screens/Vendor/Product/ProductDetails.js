@@ -33,22 +33,24 @@ const ProductDetails = ({ route, navigation }) => {
     };
 
   const getProductImages = () => {
-    if (product.images && product.images.length > 0) {
-      return product.images;
+    let extracted = [];
+    if (Array.isArray(product?.image) && product.image.length > 0) {
+      extracted = product.image;
+    } else if (typeof product?.image === 'string' && product.image.trim() !== '') {
+      extracted = [product.image];
+    } else if (Array.isArray(product?.images) && product.images.length > 0) {
+      extracted = product.images.map(img => (typeof img === 'string' ? img : img?.uri));
+    } else if (typeof product?.images === 'string' && product.images.trim() !== '') {
+      extracted = [product.images];
     }
-    // Mock multiple images for demo purpose if none exist
-    if (product.category === 'Fabrics') {
-      return [
-        product.image,
-        'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=500&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=500&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-      ];
+
+    if (extracted.length > 0) {
+      return extracted;
     }
+
     return [
-      product.image,
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=500&auto=format&fit=crop&q=80',
     ];
   };
 

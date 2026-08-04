@@ -16,6 +16,7 @@ import authReducer from './authSlice';
 import productReducer from './productSlice';
 import bookingReducer from './bookingSlice';
 import orderReducer from './orderSlice';
+import { baseApi } from '../Services/api';
 
 // Setup MMKV Storage Instance
 const storage = createMMKV();
@@ -41,6 +42,7 @@ const combinedReducer = combineReducers({
   product: productReducer,
   booking: bookingReducer,
   order: orderReducer,
+  [baseApi.reducerPath]: baseApi.reducer,
 });
 
 const rootReducer = (state, action) => {
@@ -70,7 +72,7 @@ const store = configureStore({
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
       immutableCheck: false,
-    }),
+    }).concat(baseApi.middleware),
 });
 
 const persistor = persistStore(store);
