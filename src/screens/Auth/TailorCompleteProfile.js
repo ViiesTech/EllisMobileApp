@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import Colors from '../../config/Colors';
 import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
 import AppText from '../../components/AppText';
-import { showToast } from '../../components/Toast';
+import { showToast, showToastError } from '../../components/Toast';
 import { Dropdown } from 'react-native-element-dropdown';
+import { useDispatch } from 'react-redux';
+import { setUser, setBusinessProfile } from '../../store/authSlice';
+import { useTailorBusinessProfileMutation } from '../../Services/Auth';
 
 const SERVICES_DATA = [
   { label: 'Suit Stitching', value: 'Suit Stitching' },
@@ -16,25 +26,94 @@ const SERVICES_DATA = [
 ];
 
 const TailorCompleteProfile = ({ navigation }) => {
-  const [fullName, setFullName] = useState('');
+  const dispatch = useDispatch();
+  const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [experience, setExperience] = useState('');
-  const [service, setService] = useState('Suit Stitching');
+  const [service, setService] = useState('');
 
-  const handleContinue = () => {
-    if (!fullName.trim()) {
-      showToast('Validation Error', 'Please enter your full name', 'info');
+  const [tailorBusinessProfile, { isLoading }] =
+    useTailorBusinessProfileMutation();
+
+  const handleContinue = async () => {
+    if (!businessName.trim()) {
+      showToast('Validation Error', 'Please enter your business name', 'error');
       return;
     }
     if (!email.trim()) {
-      showToast('Validation Error', 'Please enter your email', 'info');
+      showToast('Validation Error', 'Please enter your email', 'error');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      showToast(
+        'Validation Error',
+        'Please enter a valid email address',
+        'error',
+      );
+      return;
+    }
+    if (!phone.trim()) {
+      showToast('Validation Error', 'Please enter your phone number', 'error');
+      return;
+    }
+    if (!city.trim()) {
+      showToast('Validation Error', 'Please enter your city', 'error');
+      return;
+    }
+    if (!address.trim()) {
+      showToast('Validation Error', 'Please enter your address', 'error');
+      return;
+    }
+    if (!experience.trim()) {
+      showToast('Validation Error', 'Please enter your experience', 'error');
+      return;
+    }
+    if (!service.trim()) {
+      showToast('Validation Error', 'Please select a service', 'error');
       return;
     }
 
-    navigation.navigate('UnderReview');
+    try {
+      const payload = {
+        business_name: businessName.trim(),
+        phone_number: phone.trim(),
+        city: city.trim(),
+        address: address.trim(),
+        experience: experience.trim(),
+        services: service.trim(),
+        business_email: email.trim(),
+      };
+
+      const response = await tailorBusinessProfile(payload).unwrap();
+      console.log('tailorBusinessProfile response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Tailor profile saved successfully.',
+          'success',
+        );
+        if (response?.data?.user) {
+          dispatch(setUser(response.data.user));
+        }
+        if (response?.data?.tailor) {
+          dispatch(setBusinessProfile(response.data.tailor));
+        }
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to save tailor profile.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('tailorBusinessProfile error:-', err);
+      showToastError('Error', err);
+    }
   };
 
   return (
@@ -55,14 +134,14 @@ const TailorCompleteProfile = ({ navigation }) => {
           {/* Form Fields */}
           <View style={styles.form}>
             <TextField
-              label="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Alex"
+              label="Business Name"
+              value={businessName}
+              onChangeText={setBusinessName}
+              placeholder="Business Name"
             />
 
             <TextField
-              label="Email"
+              label="Business Email"
               leftIcon="mail"
               value={email}
               onChangeText={setEmail}
@@ -94,10 +173,11 @@ const TailorCompleteProfile = ({ navigation }) => {
             />
 
             <TextField
-              label="Experience"
+              label="Experience In Years"
               value={experience}
               onChangeText={setExperience}
               placeholder="8 Years"
+              keyboardType="number-pad"
             />
 
             {/* Services Offered Dropdown */}
@@ -120,7 +200,11 @@ const TailorCompleteProfile = ({ navigation }) => {
 
           {/* Bottom Button */}
           <View style={styles.bottomArea}>
-            <CustomButton title="Continue" onPress={handleContinue} />
+            <CustomButton
+              title="Continue"
+              onPress={handleContinue}
+              loading={isLoading}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

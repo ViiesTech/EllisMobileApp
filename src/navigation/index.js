@@ -14,6 +14,7 @@ import UserStack from './UserStack';
 import VendorStack from './VendorStack';
 import TailorStack from './TailorStack';
 import VendorCompleteProfile from '../screens/Auth/VendorCompleteProfile';
+import TailorCompleteProfile from '../screens/Auth/TailorCompleteProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,7 +43,14 @@ const Routes = () => {
             <Stack.Screen name="VendorStack" component={VendorStack} />
           )
         ) : role === 'TAILOR' ? (
-          <Stack.Screen name="TailorStack" component={TailorStack} />
+          !isBusinessProfile ? (
+            <Stack.Screen
+              name="TailorCompleteProfile"
+              component={TailorCompleteProfile}
+            />
+          ) : (
+            <Stack.Screen name="TailorStack" component={TailorStack} />
+          )
         ) : (
           <Stack.Screen name="UserStack" component={UserStack} />
         )}

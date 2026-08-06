@@ -50,7 +50,7 @@ const CreateService = ({ route, navigation }) => {
   }, [service, isEditMode]);
 
   const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
       if (response.didCancel) return;
       if (response.errorMessage) {
         console.log('ImagePicker Error: ', response.errorMessage);

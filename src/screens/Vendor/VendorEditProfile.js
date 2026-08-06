@@ -24,20 +24,13 @@ const VendorEditProfile = ({ navigation }) => {
   const userProfile = useSelector(selectUser) || {};
   const [vendorUpdateProfile, { isLoading }] = useVendorUpdateProfileMutation();
 
-  // Split full name into first and last name
-  const nameParts = (userProfile.name || '').trim().split(/\s+/);
-  const initialFirstName = nameParts[0] || 'Alex';
-  const initialLastName = nameParts.slice(1).join(' ') || 'Charlie';
-
-  const [firstName, setFirstName] = useState(initialFirstName);
-  const [lastName, setLastName] = useState(initialLastName);
-  const [email, setEmail] = useState(
-    userProfile.email || 'alexcharlie878@gmail.com',
-  );
-  const [imageUri, setImageUri] = useState(userProfile.avatar || '');
+  const [firstName, setFirstName] = useState(userProfile?.name);
+  const [lastName, setLastName] = useState(userProfile?.last_name);
+  const [email, setEmail] = useState(userProfile.email);
+  const [imageUri, setImageUri] = useState(userProfile.profile_image || '');
 
   const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
       if (response.didCancel) return;
       if (response.errorMessage) {
         console.log('ImagePicker Error: ', response.errorMessage);
@@ -64,11 +57,18 @@ const VendorEditProfile = ({ navigation }) => {
       formData.append('name', firstName.trim());
       formData.append('last_name', lastName.trim());
 
-      if (imageUri && !imageUri.startsWith('http') && !imageUri.startsWith('https')) {
+      if (
+        imageUri &&
+        !imageUri.startsWith('http') &&
+        !imageUri.startsWith('https')
+      ) {
         const uriParts = imageUri.split('/');
         const fileName = uriParts[uriParts.length - 1] || 'profile.jpg';
         formData.append('profile_image', {
-          uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+          uri:
+            Platform.OS === 'android'
+              ? imageUri
+              : imageUri.replace('file://', ''),
           name: fileName,
           type: 'image/jpeg',
         });
@@ -85,23 +85,14 @@ const VendorEditProfile = ({ navigation }) => {
         );
 
         const updatedUser = response?.data?.user;
-        const updatedVendor = response?.data?.vendor;
 
         // Build new user profile object for Redux store
         const newUserObj = {
           ...userProfile,
-          name: `${updatedUser?.name || ''} ${updatedUser?.last_name || ''}`.trim(),
-          avatar: updatedVendor?.profile_image || userProfile.avatar,
+          name: updatedUser?.name,
+          last_name: updatedUser?.last_name,
+          profile_image: updatedUser?.profile_image,
         };
-
-        // Update nested user object if it exists in store
-        if (userProfile.user) {
-          newUserObj.user = {
-            ...userProfile.user,
-            name: updatedUser?.name || userProfile.user.name,
-            last_name: updatedUser?.last_name || userProfile.user.last_name,
-          };
-        }
 
         dispatch(setUser(newUserObj));
         navigation.goBack();

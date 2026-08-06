@@ -14,28 +14,24 @@ import CustomButton from '../../components/CustomButton';
 import VendorHeader from '../../components/VendorHeader';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectUser, setUserProfile } from '../../store/authSlice';
-import { showToast } from '../../components/Toast';
+import { showToast, showToastError } from '../../components/Toast';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useTailorEditProfileMutation } from '../../Services/Auth';
 
 const TailorEditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
 
-  // Split full name into first and last name
-  const nameParts = (userProfile.name || '').trim().split(/\s+/);
-  const initialFirstName = nameParts[0] || 'Liam';
-  const initialLastName = nameParts.slice(1).join(' ') || 'James';
+  const [firstName, setFirstName] = useState(userProfile.name || '');
+  const [lastName, setLastName] = useState(userProfile.last_name || '');
+  const [email, setEmail] = useState(userProfile.email || '');
+  const [imageUri, setImageUri] = useState(userProfile.profile_image || '');
 
-  const [firstName, setFirstName] = useState(initialFirstName);
-  const [lastName, setLastName] = useState(initialLastName);
-  const [email, setEmail] = useState(
-    userProfile.email || 'liamjames878@gmail.com',
-  );
-  const [imageUri, setImageUri] = useState(userProfile.avatar || '');
+  const [tailorEditProfile, { isLoading }] = useTailorEditProfileMutation();
 
   const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
       if (response.didCancel) return;
       if (response.errorMessage) {
         console.log('ImagePicker Error: ', response.errorMessage);
@@ -47,7 +43,7 @@ const TailorEditProfile = ({ navigation }) => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firstName.trim()) {
       showToast('Validation Error', 'First name cannot be empty.', 'error');
       return;
@@ -61,18 +57,59 @@ const TailorEditProfile = ({ navigation }) => {
       return;
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    dispatch(
-      setUserProfile({
-        ...userProfile,
-        name: fullName,
-        email: email.trim(),
-        avatar: imageUri,
-      }),
-    );
+    try {
+      const formData = new FormData();
+      formData.append('name', firstName.trim());
+      formData.append('last_name', lastName.trim());
 
-    showToast('Success', 'Profile changes saved successfully.', 'success');
-    navigation.goBack();
+      if (
+        imageUri &&
+        !imageUri.startsWith('http') &&
+        !imageUri.startsWith('https')
+      ) {
+        formData.append('profile_image', {
+          uri:
+            Platform.OS === 'android'
+              ? imageUri
+              : imageUri.replace('file://', ''),
+          name: `profile_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+        });
+      }
+
+      const response = await tailorEditProfile(formData).unwrap();
+      console.log('tailorEditProfile response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Profile changes saved successfully.',
+          'success',
+        );
+
+        if (response?.data?.user) {
+          dispatch(
+            setUserProfile({
+              ...userProfile,
+              name: response.data.user.name || '',
+              last_name: response.data.user.last_name || '',
+              email: response.data.user.email || email.trim(),
+              profile_image: response.data.user.profile_image,
+            }),
+          );
+        }
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to save profile changes.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('tailorEditProfile error:-', err);
+      showToastError('Error', err);
+    }
   };
 
   return (
@@ -158,6 +195,7 @@ const TailorEditProfile = ({ navigation }) => {
             title="Save Changes"
             onPress={handleSave}
             hasArrow={true}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

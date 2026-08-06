@@ -28,13 +28,11 @@ const UserEditProfile = ({ navigation }) => {
 
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
-  const [email] = useState(
-    userProfile.email || 'alexcharlie878@gmail.com',
-  );
+  const [email] = useState(userProfile.email || 'alexcharlie878@gmail.com');
   const [imageUri, setImageUri] = useState(userProfile.avatar || '');
 
   const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
       if (response.didCancel) return;
       if (response.errorMessage) {
         console.log('ImagePicker Error: ', response.errorMessage);

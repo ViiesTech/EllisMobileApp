@@ -1,18 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  user: {
-    name: 'Alan Charles',
-    email: 'alan.charles@example.com',
-    phone: '+1 234 567 8900',
-    avatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-    businessName: 'Ellis Couture Studio',
-    accountStatus: 'Approved',
-  },
+  user: null,
   token: null,
   businessProfile: null,
-  role: 'USER',
+  role: null,
 };
 
 const authSlice = createSlice({

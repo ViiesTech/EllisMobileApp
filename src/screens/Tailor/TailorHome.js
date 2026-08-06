@@ -33,7 +33,7 @@ const TailorHome = ({ navigation }) => {
           <Image
             source={{
               uri:
-                userProfile.avatar ||
+                userProfile.profile_image ||
                 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
             }}
             style={styles.avatar}
@@ -164,8 +164,7 @@ const TailorHome = ({ navigation }) => {
                       typeof b.image === 'string'
                         ? { uri: b.image }
                         : b.image || {
-                            uri:
-                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                            uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
                           }
                     }
                     style={styles.clientAvatar}

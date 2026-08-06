@@ -18,20 +18,30 @@ import Fonts from '../../../config/Fonts';
 import TextField from '../../../components/TextField';
 import AppText from '../../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
-import { addProduct } from '../../../store/productSlice';
+import { addProduct, editProduct } from '../../../store/productSlice';
 import VendorHeader from '../../../components/VendorHeader';
-import { useAddProductMutation } from '../../../Services/VendorServices';
+import {
+  useAddProductMutation,
+  useUpdateProductMutation,
+} from '../../../Services/VendorServices';
 import { showToast, showToastError } from '../../../components/Toast';
 
 const AddProduct = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const editingProduct = route.params?.product;
-
-  const [addProductMutation, { isLoading }] = useAddProductMutation();
+  console.log('editingProduct:-', editingProduct);
+  const [addProductMutation, { isLoading: isAdding }] = useAddProductMutation();
+  const [updateProductMutation, { isLoading: isUpdating }] =
+    useUpdateProductMutation();
+  const isLoading = isAdding || isUpdating;
 
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
-    editingProduct?.price ? String(editingProduct.price) : '',
+    editingProduct?.price_per_meter
+      ? String(editingProduct.price_per_meter)
+      : editingProduct?.price
+      ? String(editingProduct.price)
+      : '',
   );
   const [category, setCategory] = useState(
     editingProduct?.category || 'Fabrics',
@@ -40,25 +50,41 @@ const AddProduct = ({ route, navigation }) => {
     editingProduct?.description || '',
   );
   const [stock, setStock] = useState(
-    editingProduct?.stock ? String(editingProduct.stock) : '10',
+    editingProduct?.available_stock !== undefined
+      ? String(editingProduct.available_stock)
+      : editingProduct?.stock
+      ? String(editingProduct.stock)
+      : '10',
   );
   const [material, setMaterial] = useState(
     editingProduct?.material || 'Pure Silk / Wool',
   );
   const [color, setColor] = useState(editingProduct?.color || 'Olive Green');
 
-  const initialImages = editingProduct?.images
-    ? editingProduct.images
-    : editingProduct?.image
-    ? [editingProduct.image]
-    : [];
-  const [images, setImages] = useState(initialImages);
+  const getInitialImages = () => {
+    if (!editingProduct) return [];
+    if (Array.isArray(editingProduct.images)) return editingProduct.images;
+    if (
+      typeof editingProduct.images === 'string' &&
+      editingProduct.images.trim() !== ''
+    )
+      return [editingProduct.images];
+    if (Array.isArray(editingProduct.images)) return editingProduct.images;
+    if (
+      typeof editingProduct.images === 'string' &&
+      editingProduct.images.trim() !== ''
+    )
+      return [editingProduct.images];
+    return [];
+  };
+
+  const [images, setImages] = useState(getInitialImages());
 
   const [catModalVisible, setCatModalVisible] = useState(false);
 
   const handlePickImage = () => {
     launchImageLibrary(
-      { mediaType: 'photo', selectionLimit: 0, quality: 0.8 },
+      { mediaType: 'photo', selectionLimit: 0, quality: 0.5 },
       response => {
         if (response.didCancel) return;
         if (response.errorMessage) {
@@ -123,28 +149,51 @@ const AddProduct = ({ route, navigation }) => {
         }
       });
 
-      const response = await addProductMutation(formData).unwrap();
-      console.log('addProduct response:-', response);
+      let response;
+      if (editingProduct) {
+        response = await updateProductMutation({
+          id: editingProduct.id,
+          body: formData,
+        }).unwrap();
+        console.log('updateProduct response:-', response);
+      } else {
+        response = await addProductMutation(formData).unwrap();
+        console.log('addProduct response:-', response);
+      }
 
       if (response?.success) {
         showToast(
           'Success',
-          response?.message || 'Product created successfully.',
+          response?.message ||
+            (editingProduct
+              ? 'Product updated successfully.'
+              : 'Product created successfully.'),
           'success',
         );
         if (response?.data) {
-          dispatch(addProduct(response.data));
+          if (editingProduct) {
+            dispatch(
+              editProduct({ id: editingProduct.id, updates: response.data }),
+            );
+            navigation.navigate('ProductDetails', { product: response.data });
+            return;
+          } else {
+            dispatch(addProduct(response.data));
+          }
         }
         navigation.goBack();
       } else {
         showToast(
           'Error',
-          response?.message || 'Failed to create product.',
+          response?.message ||
+            (editingProduct
+              ? 'Failed to update product.'
+              : 'Failed to create product.'),
           'error',
         );
       }
     } catch (err) {
-      console.log('addProduct error:-', err);
+      console.log('handleSubmit error:-', err);
       showToastError('Error', err);
     }
   };

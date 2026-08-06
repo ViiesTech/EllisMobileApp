@@ -8,40 +8,16 @@ import {
   Alert,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { launchImageLibrary } from 'react-native-image-picker';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {
-  selectUser,
-  setUserProfile,
-  setClearStore,
-  setUser,
-} from '../../store/authSlice';
+import { selectUser, setClearStore, setUser } from '../../store/authSlice';
 
 const TailorProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
-
-  const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, response => {
-      if (response.didCancel) return;
-      if (response.errorMessage) {
-        console.log('ImagePicker Error: ', response.errorMessage);
-        return;
-      }
-      if (response.assets && response.assets.length > 0) {
-        dispatch(
-          setUserProfile({
-            ...userProfile,
-            avatar: response.assets[0].uri,
-          }),
-        );
-      }
-    });
-  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -123,17 +99,13 @@ const TailorProfile = ({ navigation }) => {
               style={styles.avatarImage}
               source={{
                 uri:
-                  userProfile.avatar ||
+                  userProfile.profile_image ||
                   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
               }}
             />
           </View>
-          <AppText style={styles.userName}>
-            {userProfile.name || 'Liam James'}
-          </AppText>
-          <AppText style={styles.userEmail}>
-            {userProfile.email || 'liamjames878@gmail.com'}
-          </AppText>
+          <AppText style={styles.userName}>{userProfile.name}</AppText>
+          <AppText style={styles.userEmail}>{userProfile.email}</AppText>
         </View>
 
         {/* Menu Items List */}

@@ -13,6 +13,7 @@ import VendorHeader from '../../components/VendorHeader';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   selectBusinessProfile,
+  selectUser,
   setBusinessProfile,
 } from '../../store/authSlice';
 import { showToast, showToastError } from '../../components/Toast';
@@ -20,23 +21,29 @@ import { useVendorBusinessProfileMutation } from '../../Services/Auth';
 
 const VendorBusinessProfile = ({ navigation }) => {
   const dispatch = useDispatch();
+  const userProfile = useSelector(selectUser);
   const businessProfile = useSelector(selectBusinessProfile) || {};
   const [vendorBusinessProfile, { isLoading }] =
     useVendorBusinessProfileMutation();
+  console.log('businessProfile:->', businessProfile);
 
-  const [businessName, setBusinessName] = useState(
-    businessProfile.business_name,
-  );
-  const [businessEmail, setBusinessEmail] = useState(
-    businessProfile.business_email,
-  );
-  const [businessPhone, setBusinessPhone] = useState(
-    businessProfile.business_phone,
-  );
-  const [city, setCity] = useState(businessProfile.city);
-  const [address, setAddress] = useState(businessProfile.address);
+  let business_name =
+    userProfile.business_name || businessProfile?.business_name;
+  let business_email =
+    userProfile.business_email || businessProfile?.business_email;
+  let business_phone =
+    userProfile.business_phone || businessProfile?.business_phone;
+  let _city = userProfile.city || businessProfile?.city;
+  let _address = userProfile.address || businessProfile?.address;
+
+  const [businessName, setBusinessName] = useState(business_name);
+  const [businessEmail, setBusinessEmail] = useState(business_email);
+  const [businessPhone, setBusinessPhone] = useState(business_phone);
+  const [city, setCity] = useState(_city);
+  const [address, setAddress] = useState(_address);
 
   const handleSave = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!businessName.trim()) {
       showToast('Validation Error', 'Business name cannot be empty.', 'error');
       return;
@@ -45,9 +52,6 @@ const VendorBusinessProfile = ({ navigation }) => {
       showToast('Validation Error', 'Business email cannot be empty.', 'error');
       return;
     }
-
-    // Simple email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(businessEmail.trim())) {
       showToast(
         'Validation Error',
@@ -56,7 +60,6 @@ const VendorBusinessProfile = ({ navigation }) => {
       );
       return;
     }
-
     if (!businessPhone.trim()) {
       showToast('Validation Error', 'Business phone cannot be empty.', 'error');
       return;
@@ -103,7 +106,7 @@ const VendorBusinessProfile = ({ navigation }) => {
     }
   };
 
-  console.log('businessProfile:-', businessProfile);
+  // console.log('businessProfile:-', businessProfile);
   return (
     <View style={styles.safeArea}>
       <VendorHeader

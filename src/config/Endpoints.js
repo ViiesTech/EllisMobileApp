@@ -9,4 +9,6 @@ export const Endpoints = {
   vendorUpdateProfile: `vendor/update/profile`,
   addProduct: `vendor/products/create`,
   getMyProducts: `vendor/products`,
+  tailorBusinessProfile: `tailor/profile/create`,
+  tailorEditProfile: `tailor/profile/edit`,
 };

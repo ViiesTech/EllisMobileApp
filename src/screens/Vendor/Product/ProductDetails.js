@@ -5,42 +5,40 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../../config/Colors';
 import Fonts from '../../../config/Fonts';
 import AppText from '../../../components/AppText';
-import { useSelector } from 'react-redux';
-import { selectProducts } from '../../../store/productSlice';
-import Feather from 'react-native-vector-icons/Feather';
 import VendorHeader from '../../../components/VendorHeader';
 import CustomImageViewer from '../../../components/CustomImageViewer';
+import { useDeleteProductMutation } from '../../../Services/VendorServices';
+import { showToast, showToastError } from '../../../components/Toast';
 
 const ProductDetails = ({ route, navigation }) => {
-  const products = useSelector(selectProducts);
-  const routeProduct = route.params?.product;
-  const product = products.find(p => p.id === routeProduct?.id) ||
-    routeProduct || {
-      name: 'Italian Navy Wool Suit Fabric',
-      category: 'Fabrics',
-      price: 120,
-      rating: 4.8,
-      reviews: 42,
-      stock: 15,
-      material: 'Pure Wool',
-      description: 'Premium 100% Super 130s Italian Wool.',
-      image:
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-    };
+  const product = route.params?.product;
+  console.log('product:-', product);
+  const [deleteProductMutation, { isLoading: isDeleting }] =
+    useDeleteProductMutation();
 
   const getProductImages = () => {
     let extracted = [];
-    if (Array.isArray(product?.image) && product.image.length > 0) {
-      extracted = product.image;
-    } else if (typeof product?.image === 'string' && product.image.trim() !== '') {
-      extracted = [product.image];
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      extracted = product.images;
+    } else if (
+      typeof product?.images === 'string' &&
+      product.images.trim() !== ''
+    ) {
+      extracted = [product.images];
     } else if (Array.isArray(product?.images) && product.images.length > 0) {
-      extracted = product.images.map(img => (typeof img === 'string' ? img : img?.uri));
-    } else if (typeof product?.images === 'string' && product.images.trim() !== '') {
+      extracted = product.images.map(img =>
+        typeof img === 'string' ? img : img?.uri,
+      );
+    } else if (
+      typeof product?.images === 'string' &&
+      product.images.trim() !== ''
+    ) {
       extracted = [product.images];
     }
 
@@ -58,14 +56,56 @@ const ProductDetails = ({ route, navigation }) => {
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  let colorVal = 'Olive Green';
-  const lowerName = product.name.toLowerCase();
-  if (lowerName.includes('navy')) colorVal = 'Navy Blue';
-  else if (lowerName.includes('charcoal')) colorVal = 'Charcoal';
-  else if (lowerName.includes('white')) colorVal = 'White';
-  else if (lowerName.includes('black')) colorVal = 'Midnight Black';
-  else if (lowerName.includes('grey') || lowerName.includes('gray'))
-    colorVal = 'Slate Gray';
+  const priceVal = product?.price_per_meter || product?.price || '0';
+  const stockVal =
+    product?.available_stock !== undefined
+      ? product.available_stock
+      : product?.stock || 0;
+  const materialVal = product?.material || 'Standard Fabric';
+  const colorVal = product?.color || 'Olive Green';
+
+  const isAvailable =
+    stockVal === 'Yes' ||
+    stockVal === 'yes' ||
+    stockVal === true ||
+    (typeof stockVal === 'number' && stockVal > 0) ||
+    (typeof stockVal === 'string' && parseInt(stockVal, 10) > 0);
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Product',
+      `Are you sure you want to delete "${product.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await deleteProductMutation(product.id).unwrap();
+              if (response?.success) {
+                showToast(
+                  'Success',
+                  response?.message || 'Product deleted successfully.',
+                  'success',
+                );
+                navigation.goBack();
+              } else {
+                showToast(
+                  'Error',
+                  response?.message || 'Failed to delete product.',
+                  'error',
+                );
+              }
+            } catch (err) {
+              console.log('deleteProduct error:-', err);
+              showToastError('Error', err);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View style={styles.safeAreaVendor}>
@@ -94,9 +134,7 @@ const ProductDetails = ({ route, navigation }) => {
 
           <View style={styles.topInfoRight}>
             <AppText style={styles.productNameVendor}>{product.name}</AppText>
-            <AppText style={styles.productPriceVendor}>
-              ${product.price}
-            </AppText>
+            <AppText style={styles.productPriceVendor}>${priceVal}</AppText>
             <AppText style={styles.productUnitVendor}>Per Meter</AppText>
           </View>
         </View>
@@ -115,32 +153,37 @@ const ProductDetails = ({ route, navigation }) => {
 
           <AppText style={styles.detailSectionHeader}>Stock</AppText>
           <AppText style={styles.detailSectionContent}>
-            {product.stock > 0 ? `Available` : 'Out of Stock'}
+            {isAvailable ? 'Available' : 'Out of Stock'}
           </AppText>
 
           <AppText style={styles.detailSectionHeader}>Color</AppText>
           <AppText style={styles.detailSectionContent}>{colorVal}</AppText>
 
           <AppText style={styles.detailSectionHeader}>Material</AppText>
-          <AppText style={styles.detailSectionContent}>
-            {product.material || 'Standard Fabric'}
-          </AppText>
+          <AppText style={styles.detailSectionContent}>{materialVal}</AppText>
         </View>
       </ScrollView>
 
       <View style={styles.bottomBtnContainerVendor}>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          disabled={isDeleting}
+          activeOpacity={0.8}
+        >
+          {isDeleting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <AppText style={styles.deleteButtonText}>Delete Product</AppText>
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => navigation.navigate('AddProduct', { product })}
           activeOpacity={0.8}
         >
           <AppText style={styles.editButtonText}>Edit Product</AppText>
-          <Feather
-            name="arrow-right"
-            size={20}
-            color="#000000"
-            style={styles.arrowIconVendor}
-          />
         </TouchableOpacity>
       </View>
 
@@ -149,7 +192,7 @@ const ProductDetails = ({ route, navigation }) => {
         images={images}
         imageIndex={currentImageIndex}
         onClose={() => setIsViewerVisible(false)}
-        onImageIndexChange={(index) => setCurrentImageIndex(index)}
+        onImageIndexChange={index => setCurrentImageIndex(index)}
       />
     </View>
   );
@@ -221,10 +264,14 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 20,
-    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'space-between',
+    // backgroundColor: 'teal',
   },
   editButton: {
-    height: 54,
+    height: 50,
+    width: '48%',
     backgroundColor: '#DBA83A',
     borderRadius: 10,
     flexDirection: 'row',
@@ -238,14 +285,31 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   editButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: Fonts.bold,
     color: '#000000',
     fontWeight: '700',
   },
-  arrowIconVendor: {
-    position: 'absolute',
-    right: 20,
+  deleteButton: {
+    height: 50,
+    width: '48%',
+    backgroundColor: Colors.secondary,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });
 

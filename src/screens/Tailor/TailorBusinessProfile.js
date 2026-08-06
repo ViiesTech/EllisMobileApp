@@ -13,8 +13,15 @@ import VendorHeader from '../../components/VendorHeader';
 import AppText from '../../components/AppText';
 import { Dropdown } from 'react-native-element-dropdown';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUser, setUserProfile } from '../../store/authSlice';
-import { showToast } from '../../components/Toast';
+import {
+  selectBusinessProfile,
+  selectUser,
+  setBusinessProfile,
+  setUser,
+  setUserProfile,
+} from '../../store/authSlice';
+import { showToast, showToastError } from '../../components/Toast';
+import { useTailorBusinessProfileMutation } from '../../Services/Auth';
 
 const SERVICES_DATA = [
   { label: 'Suit Stitching', value: 'Suit Stitching' },
@@ -27,37 +34,52 @@ const SERVICES_DATA = [
 const TailorBusinessProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
+  const businessProfile = useSelector(selectBusinessProfile) || {};
 
-  const [fullName, setFullName] = useState(userProfile.name || 'Alex');
-  const [email, setEmail] = useState(userProfile.email || 'your@email.com');
-  const [phone, setPhone] = useState(userProfile.phone || '+123-456-7890');
-  const [city, setCity] = useState(userProfile.city || 'New York');
-  const [address, setAddress] = useState(userProfile.address || 'New York');
-  const [experience, setExperience] = useState(userProfile.experience || '8 Years');
-  const [servicesOffered, setServicesOffered] = useState(
-    userProfile.servicesOffered || 'Suit Stitching'
-  );
+  let _businessName =
+    businessProfile?.business_name?.trim() || userProfile?.name?.trim();
+  let _email =
+    businessProfile?.business_email?.trim() ||
+    userProfile?.business_email?.trim();
+  let _phone =
+    businessProfile?.phone_number?.trim() || userProfile?.phone_number?.trim();
+  let _city = businessProfile?.city?.trim() || userProfile?.city?.trim();
+  let _address =
+    businessProfile?.address?.trim() || userProfile?.address?.trim();
+  let _experience =
+    businessProfile?.experience?.trim() || userProfile?.experience?.trim();
+  let _servicesOffered =
+    businessProfile?.services?.trim() || userProfile?.services?.trim();
 
-  const handleSave = () => {
-    if (!fullName.trim()) {
-      showToast('Validation Error', 'Full name cannot be empty.', 'error');
+  const [businessName, setBusinessName] = useState(_businessName);
+  const [email, setEmail] = useState(_email);
+  const [phone, setPhone] = useState(_phone);
+  const [city, setCity] = useState(_city);
+  const [address, setAddress] = useState(_address);
+  const [experience, setExperience] = useState(_experience);
+  const [servicesOffered, setServicesOffered] = useState(_servicesOffered);
+
+  const [tailorBusinessProfile, { isLoading }] =
+    useTailorBusinessProfileMutation();
+
+  const handleSave = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!businessName.trim()) {
+      showToast('Validation Error', 'Business name cannot be empty.', 'error');
       return;
     }
     if (!email.trim()) {
       showToast('Validation Error', 'Email cannot be empty.', 'error');
       return;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       showToast(
         'Validation Error',
         'Please enter a valid email address.',
-        'error'
+        'error',
       );
       return;
     }
-
     if (!phone.trim()) {
       showToast('Validation Error', 'Phone number cannot be empty.', 'error');
       return;
@@ -75,23 +97,48 @@ const TailorBusinessProfile = ({ navigation }) => {
       return;
     }
 
-    dispatch(
-      setUserProfile({
-        ...userProfile,
-        name: fullName.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
+    try {
+      const payload = {
+        business_name: businessName.trim(),
+        phone_number: phone.trim(),
         city: city.trim(),
         address: address.trim(),
         experience: experience.trim(),
-        servicesOffered: servicesOffered,
-      })
-    );
+        services: servicesOffered.trim(),
+        business_email: email.trim(),
+      };
 
-    showToast('Success', 'Business profile saved successfully.', 'success');
-    navigation.goBack();
+      const response = await tailorBusinessProfile(payload).unwrap();
+      console.log('tailorBusinessProfile response:-', response);
+
+      if (response?.success) {
+        showToast(
+          'Success',
+          response?.message || 'Business profile updated successfully.',
+          'success',
+        );
+        if (response?.data?.user) {
+          dispatch(setUser(response.data.user));
+        }
+        if (response?.data?.tailor) {
+          dispatch(setBusinessProfile(response.data.tailor));
+        }
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to save tailor profile.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('tailorBusinessProfile error:-', err);
+      showToastError('Error', err);
+    }
   };
 
+  console.log('userProfile:- ', userProfile);
+  console.log('businessProfile:- ', businessProfile);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -111,13 +158,13 @@ const TailorBusinessProfile = ({ navigation }) => {
         >
           <View style={styles.form}>
             <TextField
-              label="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Full Name"
+              label="Business Name"
+              value={businessName}
+              onChangeText={setBusinessName}
+              placeholder="Business Name"
             />
             <TextField
-              label="Email"
+              label="Business Email"
               value={email}
               onChangeText={setEmail}
               placeholder="your@email.com"
@@ -144,10 +191,11 @@ const TailorBusinessProfile = ({ navigation }) => {
               placeholder="Address"
             />
             <TextField
-              label="Experience"
+              label="Experience In Years"
               value={experience}
               onChangeText={setExperience}
               placeholder="Experience"
+              keyboardType="number-pad"
             />
 
             {/* Services Offered Dropdown */}
@@ -164,7 +212,7 @@ const TailorBusinessProfile = ({ navigation }) => {
                 valueField="value"
                 placeholder="Select Service"
                 value={servicesOffered}
-                onChange={(item) => setServicesOffered(item.value)}
+                onChange={item => setServicesOffered(item.value)}
               />
             </View>
           </View>
@@ -174,6 +222,7 @@ const TailorBusinessProfile = ({ navigation }) => {
             title="Save Changes"
             onPress={handleSave}
             hasArrow={true}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

@@ -89,6 +89,7 @@ const VendorProfile = ({ navigation }) => {
     { id: 'logout', label: 'Logout', action: handleLogout, isRed: true },
   ];
 
+  console.log('userProfile:->', userProfile);
   return (
     <View style={styles.mainContainer}>
       <VendorHeader navigation={navigation} title="PROFILE" goBack={false} />
@@ -103,7 +104,7 @@ const VendorProfile = ({ navigation }) => {
             <Image
               source={{
                 uri:
-                  userProfile.avatar ||
+                  userProfile.profile_image ||
                   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
               }}
               style={styles.avatarImage}

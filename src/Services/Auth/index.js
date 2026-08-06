@@ -69,6 +69,24 @@ const vendorUpdateProfile = body => {
   };
 };
 
+const tailorBusinessProfile = body => {
+  console.log('tailorBusinessProfile_body:-', body);
+  return {
+    url: Endpoints.tailorBusinessProfile,
+    method: apiMethods.post,
+    body,
+  };
+};
+
+const tailorEditProfile = body => {
+  console.log('tailorEditProfile_body:-', body);
+  return {
+    url: Endpoints.tailorEditProfile,
+    method: apiMethods.post,
+    body,
+  };
+};
+
 export const AuthService = baseApi.injectEndpoints({
   endpoints: build => ({
     signup: build.mutation({ query: signup }),
@@ -83,6 +101,12 @@ export const AuthService = baseApi.injectEndpoints({
     vendorUpdateProfile: build.mutation({
       query: vendorUpdateProfile,
     }),
+    tailorBusinessProfile: build.mutation({
+      query: tailorBusinessProfile,
+    }),
+    tailorEditProfile: build.mutation({
+      query: tailorEditProfile,
+    }),
   }),
   overrideExisting: true,
 });
@@ -96,4 +120,6 @@ export const {
   useResetPasswordMutation,
   useVendorBusinessProfileMutation,
   useVendorUpdateProfileMutation,
+  useTailorBusinessProfileMutation,
+  useTailorEditProfileMutation,
 } = AuthService;

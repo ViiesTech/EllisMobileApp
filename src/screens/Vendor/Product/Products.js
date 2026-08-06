@@ -104,7 +104,7 @@ const Products = ({ navigation }) => {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
         ListEmptyComponent={
-          isLoading ? (
+          isLoading && page !== 1 ? (
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color="#DBA83A" />
             </View>
