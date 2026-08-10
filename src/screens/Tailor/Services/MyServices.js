@@ -7,34 +7,43 @@ import {
   Dimensions,
   Alert,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Colors from '../../../config/Colors';
 import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectServices, deleteService } from '../../../store/bookingSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import { AppImages } from '../../../assets/images/AppImages';
+import {
+  useGetTailorServicesQuery,
+  useDeleteTailorServiceMutation,
+} from '../../../Services/TailorServices';
+import { showToast, showToastError } from '../../../components/Toast';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = (screenWidth - 40 - 16) / 2; // 40 for screen padding, 16 for column gap
 
 export const getImageSource = item => {
-  if (item?.image && item.image !== '') {
-    if (typeof item.image === 'string') {
-      return { uri: item.image };
+  const imgUrl = item?.image_url;
+  if (imgUrl && imgUrl !== '') {
+    if (typeof imgUrl === 'string') {
+      return { uri: imgUrl };
     }
-    return item.image;
+    return imgUrl;
   }
-  if (item?.id === 's1') return AppImages.placeholder;
-  if (item?.id === 's2') return AppImages.placeholder;
-  if (item?.id === 's3') return AppImages.placeholder;
   return AppImages.placeholder;
 };
 
 const MyServices = ({ navigation }) => {
-  const dispatch = useDispatch();
-  const services = useSelector(selectServices);
+  const {
+    data: servicesResponse,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useGetTailorServicesQuery();
+  const [deleteTailorService] = useDeleteTailorServiceMutation();
+  const servicesList = servicesResponse?.data || [];
 
   const handleDelete = (id, name) => {
     Alert.alert(
@@ -45,9 +54,22 @@ const MyServices = ({ navigation }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            dispatch(deleteService(id));
-            Alert.alert('Deleted', 'Service package has been removed.');
+          onPress: async () => {
+            try {
+              const res = await deleteTailorService(id).unwrap();
+              if (res?.success) {
+                showToast(
+                  'Success',
+                  'Service has been removed successfully.',
+                  'success',
+                );
+              } else {
+                showToastError('Error', 'Failed to delete service.');
+              }
+            } catch (err) {
+              console.log('deleteTailorService error:', err);
+              showToastError('Error', err?.data?.message || 'Failed to delete');
+            }
           },
         },
       ],
@@ -65,44 +87,61 @@ const MyServices = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+        }
       >
-        <View style={styles.gridContainer}>
-          {services.map(item => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.serviceCard}
-              onPress={() =>
-                navigation.navigate('ServiceDetails', { service: item })
-              }
-              activeOpacity={0.8}
-            >
-              {/* Top Row of Card */}
-              <View style={styles.cardTopRow}>
-                <View style={styles.iconContainer}>
-                  <Image
-                    source={getImageSource(item)}
-                    style={styles.serviceIconImage}
-                  />
+        {isLoading ? (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginTop: 40 }}
+          />
+        ) : servicesList.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <AppText style={styles.emptyText}>
+              No services found. Click below to add one!
+            </AppText>
+          </View>
+        ) : (
+          <View style={styles.gridContainer}>
+            {servicesList.map(item => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.serviceCard}
+                onPress={() =>
+                  navigation.navigate('ServiceDetails', { service: item })
+                }
+                activeOpacity={0.8}
+              >
+                {/* Top Row of Card */}
+                <View style={styles.cardTopRow}>
+                  <View style={styles.iconContainer}>
+                    <Image
+                      source={getImageSource(item)}
+                      style={styles.serviceIconImage}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteIconBtn}
+                    onPress={() => handleDelete(item.id, item.name)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Feather name="trash-2" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.deleteIconBtn}
-                  onPress={() => handleDelete(item.id, item.name)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Feather name="trash-2" size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
 
-              {/* Title & Description */}
-              <AppText style={styles.serviceTitle} numberOfLines={2}>
-                {item.name}
-              </AppText>
-              <AppText style={styles.serviceDesc} numberOfLines={2}>
-                {item.description || 'Lorem ipsum simply dummy'}
-              </AppText>
-            </TouchableOpacity>
-          ))}
-        </View>
+                {/* Title & Description */}
+                <AppText style={styles.serviceTitle} numberOfLines={2}>
+                  {item.name}
+                </AppText>
+                <AppText style={styles.serviceDesc} numberOfLines={2}>
+                  {item.description || 'Lorem ipsum simply dummy'}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Add New Service Bottom Button */}
@@ -164,7 +203,7 @@ const styles = StyleSheet.create({
     height: 65,
     width: '100%',
     borderRadius: 10,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.graybordercolor,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -224,6 +263,17 @@ const styles = StyleSheet.create({
   arrowIcon: {
     position: 'absolute',
     right: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 80,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#7C7C7C',
+    textAlign: 'center',
   },
 });
 

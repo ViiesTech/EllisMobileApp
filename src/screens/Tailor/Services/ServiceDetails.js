@@ -10,13 +10,12 @@ import {
 import Colors from '../../../config/Colors';
 import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
-import { useDispatch } from 'react-redux';
-import { deleteService } from '../../../store/bookingSlice';
 import { getImageSource } from './MyServices';
+import { useDeleteTailorServiceMutation } from '../../../Services/TailorServices';
 
 const ServiceDetails = ({ route, navigation }) => {
-  const dispatch = useDispatch();
   const { service } = route.params || {};
+  const [deleteTailorService] = useDeleteTailorServiceMutation();
 
   if (!service) {
     return (
@@ -37,17 +36,30 @@ const ServiceDetails = ({ route, navigation }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            dispatch(deleteService(service.id));
-            Alert.alert('Deleted', 'Service package has been removed.', [
-              { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
+          onPress: async () => {
+            try {
+              const res = await deleteTailorService(service.id).unwrap();
+              if (res?.success) {
+                Alert.alert('Deleted', 'Service package has been removed.', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                Alert.alert(
+                  'Error',
+                  res?.message || 'Failed to delete service.',
+                );
+              }
+            } catch (err) {
+              console.log('deleteTailorService error:', err);
+              Alert.alert('Error', 'An error occurred while deleting service.');
+            }
           },
         },
       ],
     );
   };
 
+  console.log('service:-', service);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -80,8 +92,7 @@ const ServiceDetails = ({ route, navigation }) => {
         <View style={styles.section}>
           <AppText style={styles.sectionTitle}>Service Description</AppText>
           <AppText style={styles.sectionBody}>
-            {service.description ||
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'}
+            {service.description || '----'}
           </AppText>
         </View>
 
@@ -89,7 +100,7 @@ const ServiceDetails = ({ route, navigation }) => {
         <View style={styles.section}>
           <AppText style={styles.sectionTitle}>Style Category</AppText>
           <AppText style={styles.sectionBody}>
-            {service.styleCategory || 'Apparel'}
+            {service.category_name || '----'}
           </AppText>
         </View>
 
@@ -152,7 +163,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 12,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.graybordercolor,
     justifyContent: 'center',
     alignItems: 'center',
   },

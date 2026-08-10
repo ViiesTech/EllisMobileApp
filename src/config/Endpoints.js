@@ -11,4 +11,9 @@ export const Endpoints = {
   getMyProducts: `vendor/products`,
   tailorBusinessProfile: `tailor/profile/create`,
   tailorEditProfile: `tailor/profile/edit`,
+  vendorDashboard: `vendor/dashboard`,
+  vendorOrders: `vendor/orders`,
+  getTailorCategories: `tailors/service/categories`,
+  getVendorCategories: `vendor/product/categories`,
+  getTailorServices: `tailor/services`,
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -23,8 +23,10 @@ import VendorHeader from '../../../components/VendorHeader';
 import {
   useAddProductMutation,
   useUpdateProductMutation,
+  useGetVendorCategoriesQuery,
 } from '../../../Services/VendorServices';
 import { showToast, showToastError } from '../../../components/Toast';
+import { Dropdown } from 'react-native-element-dropdown';
 
 const AddProduct = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -35,6 +37,10 @@ const AddProduct = ({ route, navigation }) => {
     useUpdateProductMutation();
   const isLoading = isAdding || isUpdating;
 
+  const { data: categoriesResponse, isLoading: isLoadingCategories } =
+    useGetVendorCategoriesQuery();
+  const categoriesList = categoriesResponse?.data || [];
+
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
     editingProduct?.price_per_meter
@@ -43,9 +49,7 @@ const AddProduct = ({ route, navigation }) => {
       ? String(editingProduct.price)
       : '',
   );
-  const [category, setCategory] = useState(
-    editingProduct?.category || 'Fabrics',
-  );
+  const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState(
     editingProduct?.description || '',
   );
@@ -60,6 +64,21 @@ const AddProduct = ({ route, navigation }) => {
     editingProduct?.material || 'Pure Silk / Wool',
   );
   const [color, setColor] = useState(editingProduct?.color || 'Olive Green');
+
+  useEffect(() => {
+    if (editingProduct) {
+      if (editingProduct.category_id) {
+        setCategoryId(editingProduct.category_id);
+      } else if (editingProduct.category && categoriesList.length > 0) {
+        const matched = categoriesList.find(
+          c => c.name.toLowerCase() === editingProduct.category.toLowerCase(),
+        );
+        if (matched) setCategoryId(matched.id);
+      }
+    } else if (categoriesList.length > 0 && !categoryId) {
+      setCategoryId(categoriesList[0].id);
+    }
+  }, [editingProduct, categoriesList]);
 
   const getInitialImages = () => {
     if (!editingProduct) return [];
@@ -79,8 +98,6 @@ const AddProduct = ({ route, navigation }) => {
   };
 
   const [images, setImages] = useState(getInitialImages());
-
-  const [catModalVisible, setCatModalVisible] = useState(false);
 
   const handlePickImage = () => {
     launchImageLibrary(
@@ -120,11 +137,15 @@ const AddProduct = ({ route, navigation }) => {
       showToast('Validation Error', 'Please enter price per meter', 'error');
       return;
     }
+    if (!categoryId) {
+      showToast('Validation Error', 'Please select a category', 'error');
+      return;
+    }
 
     try {
       const formData = new FormData();
       formData.append('name', name.trim());
-      formData.append('category', category.trim());
+      formData.append('category_id', String(categoryId));
       formData.append('description', description.trim());
       formData.append('price_per_meter', price.trim());
       formData.append('available_stock', stock.trim());
@@ -277,19 +298,30 @@ const AddProduct = ({ route, navigation }) => {
             placeholder="Cotton"
           />
 
-          {/* Category Trigger Field */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => setCatModalVisible(true)}
-          >
-            <View pointerEvents="none">
-              <TextField
-                label="Category"
-                value={category}
-                placeholder="Lorem ipsum"
-              />
-            </View>
-          </TouchableOpacity>
+          {/* Category Dropdown Selector */}
+          <View style={styles.dropdownContainer}>
+            <AppText style={styles.dropdownLabel}>Category</AppText>
+            <Dropdown
+              style={styles.dropdown}
+              placeholderStyle={styles.placeholderStyle}
+              selectedTextStyle={styles.selectedTextStyle}
+              containerStyle={styles.dropdownMenuContainer}
+              data={categoriesList.map(cat => ({
+                label: cat.name,
+                value: cat.id,
+              }))}
+              maxHeight={220}
+              labelField="label"
+              valueField="value"
+              placeholder={
+                isLoadingCategories
+                  ? 'Loading categories...'
+                  : 'Select Category'
+              }
+              value={categoryId}
+              onChange={item => setCategoryId(item.value)}
+            />
+          </View>
 
           <TextField
             label="Description"
@@ -358,50 +390,6 @@ const AddProduct = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Category Selection Modal */}
-      <Modal
-        visible={catModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCatModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalBg}
-          activeOpacity={1}
-          onPress={() => setCatModalVisible(false)}
-        >
-          <View style={styles.modalCard}>
-            <AppText style={styles.modalTitle}>Select Category</AppText>
-
-            <FlatList
-              data={categories}
-              keyExtractor={item => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.catOption,
-                    category === item && styles.catOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setCategory(item);
-                    setCatModalVisible(false);
-                  }}
-                >
-                  <AppText style={styles.catOptionText}>{item}</AppText>
-                </TouchableOpacity>
-              )}
-            />
-
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => setCatModalVisible(false)}
-            >
-              <AppText style={styles.closeBtnText}>Close</AppText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
@@ -657,6 +645,43 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  dropdownContainer: {
+    marginBottom: 16,
+  },
+  dropdownLabel: {
+    fontSize: 13,
+    color: '#7C7C7C',
+    marginBottom: 6,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  dropdown: {
+    height: 52,
+    borderColor: '#E2E2E2',
+    borderWidth: 1,
+    borderRadius: 26,
+    paddingHorizontal: 18,
+    backgroundColor: Colors.white,
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#A3A3A3',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#000000',
+  },
+  dropdownMenuContainer: {
+    marginTop: -20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E2E2',
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 });
 

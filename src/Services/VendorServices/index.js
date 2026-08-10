@@ -34,6 +34,29 @@ const updateProduct = ({ id, body }) => {
   };
 };
 
+const getVendorOrders = params => {
+  return {
+    url: Endpoints.vendorOrders,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const updateVendorOrderStatus = ({ id, status }) => {
+  return {
+    url: `${Endpoints.vendorOrders}/${id}/status`,
+    method: apiMethods.post,
+    body: { status },
+  };
+};
+
+const getVendorCategories = () => {
+  return {
+    url: Endpoints.getVendorCategories,
+    method: apiMethods.get,
+  };
+};
+
 export const VendorService = baseApi.injectEndpoints({
   endpoints: build => ({
     addProduct: build.mutation({
@@ -52,6 +75,25 @@ export const VendorService = baseApi.injectEndpoints({
       query: updateProduct,
       invalidatesTags: ['VendorProducts'],
     }),
+    getVendorDashboard: build.query({
+      query: () => ({
+        url: Endpoints.vendorDashboard,
+        method: apiMethods.get,
+      }),
+      providesTags: ['VendorProducts'],
+    }),
+    getVendorOrders: build.query({
+      query: getVendorOrders,
+      providesTags: ['VendorOrders'],
+    }),
+    updateVendorOrderStatus: build.mutation({
+      query: updateVendorOrderStatus,
+      invalidatesTags: ['VendorOrders'],
+    }),
+    getVendorCategories: build.query({
+      query: getVendorCategories,
+      providesTags: ['VendorCategories'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -62,4 +104,9 @@ export const {
   useLazyGetMyProductsQuery,
   useDeleteProductMutation,
   useUpdateProductMutation,
+  useGetVendorDashboardQuery,
+  useGetVendorOrdersQuery,
+  useUpdateVendorOrderStatusMutation,
+  useGetVendorCategoriesQuery,
+  useLazyGetVendorCategoriesQuery,
 } = VendorService;

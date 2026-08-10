@@ -5,29 +5,82 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import { useSelector } from 'react-redux';
 import Colors from '../../config/Colors';
 import Fonts from '../../config/Fonts';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
-import { selectOrders } from '../../store/orderSlice';
 import VendorHeader from '../../components/VendorHeader';
+import { useGetVendorOrdersQuery } from '../../Services/VendorServices';
 
 const STATUS_TABS = ['New', 'Processing', 'Shipped', 'Delivered'];
 
 const VendorOrders = ({ navigation }) => {
-  const orders = useSelector(selectOrders);
   const [activeTab, setActiveTab] = useState('New');
 
-  const filteredOrders = orders.filter(o => {
-    const status = o.status.toLowerCase();
-    const tab = activeTab.toLowerCase();
-    if (tab === 'new') {
-      return status === 'new' || status === 'pending';
+  const statusParam = activeTab.toLowerCase() === 'new' ? 'pending' : activeTab.toLowerCase();
+  const { data: ordersResponse, isFetching } = useGetVendorOrdersQuery({ status: statusParam });
+  const apiOrders = ordersResponse?.data || [];
+
+  const formatTime = createdAt => {
+    if (!createdAt) return '1 hour ago';
+    const diffMs = new Date() - new Date(createdAt);
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  };
+
+  const mapApiOrderToUi = apiOrder => {
+    if (!apiOrder) return null;
+    const idStr = String(apiOrder.id);
+    let uiStatus = 'Pending';
+    if (apiOrder.status) {
+      uiStatus =
+        apiOrder.status.charAt(0).toUpperCase() + apiOrder.status.slice(1);
     }
-    return status === tab;
-  });
+    const firstItem = apiOrder.items?.[0];
+    const productName = firstItem?.product_name || 'Product';
+    const productImage =
+      firstItem?.product?.image ||
+      firstItem?.product_image ||
+      firstItem?.image ||
+      null;
+    const itemsCount = apiOrder.items?.length || 1;
+    const itemsInfo = `${itemsCount} Item${
+      itemsCount > 1 ? 's' : ''
+    } - $${apiOrder.total}`;
+
+    const customerName = apiOrder.user
+      ? [apiOrder.user.name, apiOrder.user.last_name].filter(Boolean).join(' ').trim() || 'Customer'
+      : 'Customer';
+
+    return {
+      id: idStr,
+      status: uiStatus,
+      price: Number(apiOrder.total),
+      itemsInfo,
+      productName,
+      customerName,
+      address: [
+        apiOrder.shipping_address,
+        apiOrder.city,
+        apiOrder.state,
+        apiOrder.zip_code,
+      ]
+        .filter(Boolean)
+        .join(', '),
+      image: productImage,
+      time: formatTime(apiOrder.created_at),
+      created_at: formatTime(apiOrder.created_at),
+    };
+  };
+
+  const filteredOrders = apiOrders.map(mapApiOrderToUi).filter(Boolean);
 
   const getStatusBadge = status => {
     switch (status) {
@@ -81,7 +134,11 @@ const VendorOrders = ({ navigation }) => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {filteredOrders.length > 0 ? (
+        {isFetching ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : filteredOrders.length > 0 ? (
           <View style={styles.ordersBox}>
             {filteredOrders.map((ord, index) => {
               const badgeColors = getStatusBadge(ord.status);
@@ -142,7 +199,7 @@ const VendorOrders = ({ navigation }) => {
                       </AppText>
                     </View>
                     <AppText style={styles.timeText}>
-                      {ord.time || '1 hour ago'}
+                      {ord.created_at || '1 hour ago'}
                     </AppText>
 
                     <View style={styles.arrowCircle}>
@@ -168,6 +225,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',

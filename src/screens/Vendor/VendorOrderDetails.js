@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Colors from '../../config/Colors';
@@ -13,11 +14,14 @@ import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import { updateOrderStatus, selectOrders } from '../../store/orderSlice';
 import VendorHeader from '../../components/VendorHeader';
+import { useUpdateVendorOrderStatusMutation } from '../../Services/VendorServices';
 
 const VendorOrderDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const routeOrder = route.params?.order;
   const orders = useSelector(selectOrders);
+  const [updatingAction, setUpdatingAction] = useState(null);
+  const [updateOrderStatusApi] = useUpdateVendorOrderStatusMutation();
 
   // Look up order dynamically from Redux store to reflect real-time updates
   const order = orders.find(o => o.id === routeOrder?.id) || routeOrder;
@@ -32,30 +36,33 @@ const VendorOrderDetails = ({ route, navigation }) => {
     );
   }
 
-  const handleAccept = () => {
-    dispatch(updateOrderStatus({ id: order.id, status: 'Processing' }));
-    navigation.goBack();
+  const handleUpdateStatus = async (newStatus, actionName) => {
+    if (updatingAction) return;
+    setUpdatingAction(actionName);
+    try {
+      await updateOrderStatusApi({
+        id: order.id,
+        status: newStatus.toLowerCase(),
+      }).unwrap();
+      dispatch(updateOrderStatus({ id: order.id, status: newStatus }));
+      navigation.goBack();
+    } catch (error) {
+      console.log('Error updating order status:', error);
+    } finally {
+      setUpdatingAction(null);
+    }
   };
 
-  const handleReject = () => {
-    dispatch(updateOrderStatus({ id: order.id, status: 'Rejected' }));
-    navigation.goBack();
-  };
-
-  const handleShip = () => {
-    dispatch(updateOrderStatus({ id: order.id, status: 'Shipped' }));
-    navigation.goBack();
-  };
-
-  const handleDeliver = () => {
-    dispatch(updateOrderStatus({ id: order.id, status: 'Delivered' }));
-    navigation.goBack();
-  };
+  // const handleAccept = () => handleUpdateStatus('Processing', 'accept');
+  // const handleReject = () => handleUpdateStatus('Rejected', 'reject');
+  const handleShip = () => handleUpdateStatus('Shipped', 'ship');
+  const handleDeliver = () => handleUpdateStatus('Delivered', 'deliver');
 
   const formattedId = order.id.startsWith('ord-')
     ? order.id.replace('ord-', '#')
     : `#${order.id}`;
 
+  console.log('order:->', order);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -112,39 +119,56 @@ const VendorOrderDetails = ({ route, navigation }) => {
 
       {/* Dynamic Action Buttons at the Bottom */}
       <View style={styles.bottomButtonsContainer}>
-        {(order.status === 'New' || order.status === 'Pending') && (
+        {/* {(order.status === 'New' || order.status === 'Pending') && (
           <View style={styles.rowButtons}>
             <TouchableOpacity
               style={styles.acceptBtn}
               onPress={handleAccept}
               activeOpacity={0.8}
+              disabled={!!updatingAction}
             >
-              <AppText style={styles.acceptBtnText}>Accept</AppText>
+              {updatingAction === 'accept' ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <AppText style={styles.acceptBtnText}>Accept</AppText>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.rejectBtn}
               onPress={handleReject}
               activeOpacity={0.8}
+              disabled={!!updatingAction}
             >
-              <AppText style={styles.rejectBtnText}>Reject</AppText>
+              {updatingAction === 'reject' ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <AppText style={styles.rejectBtnText}>Reject</AppText>
+              )}
             </TouchableOpacity>
           </View>
-        )}
+        )} */}
 
         {order.status === 'Processing' && (
           <TouchableOpacity
             style={styles.fullWidthBtn}
             onPress={handleShip}
             activeOpacity={0.8}
+            disabled={!!updatingAction}
           >
-            <AppText style={styles.fullWidthBtnText}>Ship Order</AppText>
-            <Feather
-              name="arrow-right"
-              size={20}
-              color="#000000"
-              style={styles.arrowIcon}
-            />
+            {updatingAction === 'ship' ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <>
+                <AppText style={styles.fullWidthBtnText}>Ship Order</AppText>
+                <Feather
+                  name="arrow-right"
+                  size={20}
+                  color="#000000"
+                  style={styles.arrowIcon}
+                />
+              </>
+            )}
           </TouchableOpacity>
         )}
 
@@ -153,14 +177,23 @@ const VendorOrderDetails = ({ route, navigation }) => {
             style={styles.fullWidthBtn}
             onPress={handleDeliver}
             activeOpacity={0.8}
+            disabled={!!updatingAction}
           >
-            <AppText style={styles.fullWidthBtnText}>Mark Delivered</AppText>
-            <Feather
-              name="arrow-right"
-              size={20}
-              color="#000000"
-              style={styles.arrowIcon}
-            />
+            {updatingAction === 'deliver' ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <>
+                <AppText style={styles.fullWidthBtnText}>
+                  Mark Delivered
+                </AppText>
+                <Feather
+                  name="arrow-right"
+                  size={20}
+                  color="#000000"
+                  style={styles.arrowIcon}
+                />
+              </>
+            )}
           </TouchableOpacity>
         )}
 

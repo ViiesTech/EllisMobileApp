@@ -10,20 +10,93 @@ import {
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
-import { useSelector } from 'react-redux';
-import { selectProducts } from '../../store/productSlice';
-import { selectOrders } from '../../store/orderSlice';
 import VendorHeader from '../../components/VendorHeader';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import {
+  useGetVendorDashboardQuery,
+  useGetVendorOrdersQuery,
+} from '../../Services/VendorServices';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = (screenWidth - 40 - 36) / 4; // 40 for screen padding, 36 for 3 gaps of 12
 
 const VendorHome = ({ navigation }) => {
-  const products = useSelector(selectProducts);
-  const orders = useSelector(selectOrders);
+  const { data: dashboardResponse } = useGetVendorDashboardQuery();
+  const dashboardData = dashboardResponse?.data;
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.price, 0);
+  const { data: ordersResponse } = useGetVendorOrdersQuery({});
+  const apiOrders = ordersResponse?.data || [];
+
+  const formatTime = createdAt => {
+    if (!createdAt) return '1 hour ago';
+    const diffMs = new Date() - new Date(createdAt);
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  };
+
+  const mapApiOrderToUi = apiOrder => {
+    if (!apiOrder) return null;
+    const idStr = String(apiOrder.id);
+    let uiStatus = 'Pending';
+    if (apiOrder.status) {
+      uiStatus =
+        apiOrder.status.charAt(0).toUpperCase() + apiOrder.status.slice(1);
+    }
+    const firstItem = apiOrder.items?.[0];
+    const productName = firstItem?.product_name || 'Product';
+    const productImage =
+      firstItem?.product?.image ||
+      firstItem?.product_image ||
+      firstItem?.image ||
+      null;
+    const itemsCount = apiOrder.items?.length || 1;
+    const itemsInfo = `${itemsCount} Item${itemsCount > 1 ? 's' : ''} - $${
+      apiOrder.total
+    }`;
+
+    const customerName = apiOrder.user
+      ? [apiOrder.user.name, apiOrder.user.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Customer'
+      : 'Customer';
+
+    return {
+      id: idStr,
+      status: uiStatus,
+      price: Number(apiOrder.total),
+      itemsInfo,
+      productName,
+      customerName,
+      address: [
+        apiOrder.shipping_address,
+        apiOrder.city,
+        apiOrder.state,
+        apiOrder.zip_code,
+      ]
+        .filter(Boolean)
+        .join(', '),
+      image: productImage,
+      time: formatTime(apiOrder.created_at),
+      created_at: formatTime(apiOrder.created_at),
+    };
+  };
+
+  const orders = apiOrders.map(mapApiOrderToUi).filter(Boolean);
+
+  const totalOrdersVal = dashboardData?.total_orders ?? '0';
+  const activeProductsVal = dashboardData?.active_products ?? '0';
+  const pendingOrdersVal = dashboardData?.pending_orders ?? '0';
+  const revenueVal = dashboardData?.total_revenue || 0;
+  const displayRevenue =
+    revenueVal >= 1000
+      ? `${(revenueVal / 1000).toFixed(1)}K`
+      : String(revenueVal);
 
   const getStatusBadge = status => {
     switch (status) {
@@ -60,7 +133,7 @@ const VendorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>24</AppText>
+            <AppText style={styles.statVal}>{totalOrdersVal}</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Orders</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -77,7 +150,7 @@ const VendorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="shopping-bag" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>{products?.length || 16}</AppText>
+            <AppText style={styles.statVal}>{activeProductsVal}</AppText>
             <AppText style={styles.statTitle}>Active{'\n'}Products</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -94,7 +167,7 @@ const VendorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="clock" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>{orders?.length || 7}</AppText>
+            <AppText style={styles.statVal}>{pendingOrdersVal}</AppText>
             <AppText style={styles.statTitle}>Pending{'\n'}Orders</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -111,12 +184,7 @@ const VendorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="dollar-sign" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>
-              $
-              {totalRevenue > 0
-                ? `${(totalRevenue / 1000).toFixed(1)}K`
-                : '1.5K'}
-            </AppText>
+            <AppText style={styles.statVal}>${displayRevenue}</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Revenue</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6

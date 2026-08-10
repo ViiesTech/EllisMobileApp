@@ -9,7 +9,6 @@ const signup = body => {
     body,
   };
 };
-
 const verifyOtp = body => {
   console.log('verifyOtp_body:-', body);
   return {
@@ -59,7 +58,6 @@ const vendorBusinessProfile = body => {
     body,
   };
 };
-
 const vendorUpdateProfile = body => {
   console.log('vendorUpdateProfile_body:-', body);
   return {
@@ -77,7 +75,6 @@ const tailorBusinessProfile = body => {
     body,
   };
 };
-
 const tailorEditProfile = body => {
   console.log('tailorEditProfile_body:-', body);
   return {
