@@ -150,6 +150,7 @@ const TailorBusinessProfile = ({ navigation }) => {
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={10}
         style={styles.keyboardView}
       >
         <ScrollView

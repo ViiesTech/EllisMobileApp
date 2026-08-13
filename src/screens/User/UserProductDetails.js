@@ -11,109 +11,52 @@ import {
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  addToCart,
-  selectProducts,
-  selectCart,
-} from '../../store/productSlice';
+import { addToCart, selectCart } from '../../store/productSlice';
 import Feather from 'react-native-vector-icons/Feather';
-import Svg, { Polygon, Line, Rect, Circle, Path } from 'react-native-svg';
 import { showToast } from '../../components/Toast';
 import CustomImageViewer from '../../components/CustomImageViewer';
+import {
+  DoNotBleachIcon,
+  DoNotTumbleDryIcon,
+  DryCleanIcon,
+  IronIcon,
+} from '../../assets/svg';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Custom SVG Laundry Care Icons to match premium design mockup
-const DoNotBleachIcon = () => (
-  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <Polygon
-      points="12,3 22,21 2,21"
-      stroke="#8A8A8F"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <Line x1="7" y1="11" x2="17" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
-    <Line x1="17" y1="11" x2="7" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
-  </Svg>
-);
-
-const DoNotTumbleDryIcon = () => (
-  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <Rect
-      x="3"
-      y="3"
-      width="18"
-      height="18"
-      rx="2"
-      stroke="#8A8A8F"
-      strokeWidth="2"
-    />
-    <Circle cx="12" cy="12" r="6" stroke="#8A8A8F" strokeWidth="1.5" />
-    <Line x1="5" y1="5" x2="19" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
-    <Line x1="19" y1="5" x2="5" y2="19" stroke="#8A8A8F" strokeWidth="1.5" />
-  </Svg>
-);
-
-const DryCleanIcon = () => (
-  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="9" stroke="#8A8A8F" strokeWidth="2" />
-    <Path d="M7 17 H17" stroke="#8A8A8F" strokeWidth="1.5" />
-  </Svg>
-);
-
-const IronIcon = () => (
-  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M3 17 H21 L19 11 C18 9 16 8 14 8 H7 C5 8 4 9 3 11 Z"
-      stroke="#8A8A8F"
-      strokeWidth="2"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M7 8 V5 H15 V8"
-      stroke="#8A8A8F"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-    />
-    <Circle cx="8" cy="13" r="1" fill="#8A8A8F" />
-  </Svg>
-);
-
 const UserProductDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
-
-  const products = useSelector(selectProducts);
   const cart = useSelector(selectCart);
-  const routeProduct = route.params?.product;
-  const product = products.find(p => p.id === routeProduct?.id) ||
-    routeProduct || {
-      name: 'Italian Navy Wool Suit Fabric',
-      category: 'Fabrics',
-      price: 120,
-      rating: 4.8,
-      reviews: 42,
-      stock: 15,
-      material: 'Pure Wool',
-      description: 'Premium 100% Super 130s Italian Wool.',
-      image:
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-    };
+  const product = route.params?.product;
+  console.log('product:-', product);
 
   const getProductImages = () => {
-    if (product.images && product.images.length > 0) {
-      return product.images;
-    }
-    // Mock multiple images for demo purpose if none exist
-    if (product.category === 'Fabrics') {
-      return [
-        product.image,
-        'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=500&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=500&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-      ];
+    const rawImage = product.image_url || product.image;
+    if (rawImage) {
+      if (Array.isArray(rawImage)) {
+        return rawImage.length > 0
+          ? rawImage
+          : [
+              'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop&q=80',
+            ];
+      }
+      if (typeof rawImage === 'string') {
+        if (rawImage.trim().startsWith('[') && rawImage.trim().endsWith(']')) {
+          try {
+            const parsed = JSON.parse(rawImage);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          } catch (e) {}
+        }
+        return [
+          rawImage,
+          'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&auto=format&fit=crop&q=80',
+        ];
+      }
     }
     return [
-      product.image,
       'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&auto=format&fit=crop&q=80',
     ];
@@ -125,23 +68,42 @@ const UserProductDetails = ({ route, navigation }) => {
   const [isViewerVisible, setIsViewerVisible] = useState(false);
 
   const [qty] = useState(1);
-  const [selectedColor, setSelectedColor] = useState('black');
-  const [expandedSection, setExpandedSection] = useState('shipping');
   const isInCart = cart.some(item => item.id === product.id);
-  const cartTotalItems = cart.reduce((acc, i) => acc + i.qty, 0);
+  const cartTotalItems = cart.length;
 
   const handleAddToCart = () => {
-    dispatch(addToCart({ product, quantity: qty }));
+    const rawImage = product.image_url || product.image;
+    let singleImage = Array.isArray(rawImage) ? rawImage[0] : rawImage;
+    if (
+      typeof singleImage === 'string' &&
+      singleImage.trim().startsWith('[') &&
+      singleImage.trim().endsWith(']')
+    ) {
+      try {
+        const parsed = JSON.parse(singleImage);
+        if (Array.isArray(parsed)) {
+          singleImage = parsed[0];
+        }
+      } catch (e) {}
+    }
+    const normalizedProduct = {
+      ...product,
+      price: product.price_per_meter || product.price || 120,
+      image:
+        singleImage ||
+        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+    };
+    dispatch(addToCart({ product: normalizedProduct, quantity: qty }));
     showToast('Success', 'Item added to cart successfully.', 'success');
   };
 
-  const toggleSection = section => {
-    if (expandedSection === section) {
-      setExpandedSection(null);
-    } else {
-      setExpandedSection(section);
-    }
-  };
+  // const toggleSection = section => {
+  //   if (expandedSection === section) {
+  //     setExpandedSection(null);
+  //   } else {
+  //     setExpandedSection(section);
+  //   }
+  // };
 
   const handleDotPress = index => {
     setCurrentImageIndex(index);
@@ -214,49 +176,38 @@ const UserProductDetails = ({ route, navigation }) => {
         <View style={styles.body}>
           {/* Title block */}
           <AppText style={styles.name}>{product.name.toUpperCase()}</AppText>
-          <AppText style={styles.subtitle}>Lorem Ipsum Dummy</AppText>
+          <AppText style={styles.subtitle}>
+            {product.category_name || product.category || 'Category'}
+          </AppText>
           <AppText style={styles.priceText}>
-            ${product.price}{' '}
-            {product.category === 'Fabrics' ? 'Per Meter' : 'Per Unit'}
+            ${product.price_per_meter || product.price || '0.00'}{' '}
+            {product.price_per_meter ? 'Per Meter' : 'Per Unit'}
           </AppText>
 
           {/* Colors Selection Row */}
-          <View style={styles.colorRow}>
-            <AppText style={styles.colorLabel}>Color</AppText>
-            <View style={styles.colorDots}>
-              <TouchableOpacity
-                style={[
-                  styles.colorDot,
-                  styles.colorDotBlack,
-                  selectedColor === 'black' && styles.colorDotSelected,
-                ]}
-                onPress={() => setSelectedColor('black')}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.colorDot,
-                  styles.colorDotCoral,
-                  selectedColor === 'coral' && styles.colorDotSelected,
-                ]}
-                onPress={() => setSelectedColor('coral')}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.colorDot,
-                  styles.colorDotGray,
-                  selectedColor === 'gray' && styles.colorDotSelected,
-                ]}
-                onPress={() => setSelectedColor('gray')}
-              />
+          {product.color && (
+            <View style={styles.colorRow}>
+              <AppText style={styles.colorLabel}>Color</AppText>
+              <AppText style={styles.colorValue}>{product.color}</AppText>
             </View>
+          )}
+
+          {/* Description Section */}
+          <View style={styles.infoBlock}>
+            <AppText style={styles.sectionHeader}>DESCRIPTION</AppText>
+            <AppText style={styles.sectionParagraph}>
+              {product.description ||
+                'No description available for this product.'}
+            </AppText>
           </View>
 
           {/* Materials Section */}
           <View style={styles.infoBlock}>
             <AppText style={styles.sectionHeader}>MATERIALS</AppText>
             <AppText style={styles.sectionParagraph}>
-              We work with monitoring programmes to ensure compliance with
-              safety, health and quality standards for our products.
+              Crafted with high-quality {product.material || 'Cotton'}. We work
+              with monitoring programmes to ensure compliance with safety,
+              health and quality standards for our products.
             </AppText>
           </View>
 
@@ -296,10 +247,9 @@ const UserProductDetails = ({ route, navigation }) => {
           </View>
 
           {/* Care / Shipping Policies Accordion Section */}
-          <View style={styles.infoBlock}>
+          {/* <View style={styles.infoBlock}>
             <AppText style={styles.sectionHeader}>CARE</AppText>
             <View style={styles.accordionContainer}>
-              {/* Shipping Row */}
               <View style={styles.accordionItem}>
                 <TouchableOpacity
                   style={styles.accordionHeader}
@@ -328,7 +278,6 @@ const UserProductDetails = ({ route, navigation }) => {
                 )}
               </View>
 
-              {/* COD Row */}
               <View style={styles.accordionItem}>
                 <TouchableOpacity
                   style={styles.accordionHeader}
@@ -354,7 +303,6 @@ const UserProductDetails = ({ route, navigation }) => {
                 )}
               </View>
 
-              {/* Return Row */}
               <View style={styles.accordionItem}>
                 <TouchableOpacity
                   style={styles.accordionHeader}
@@ -382,7 +330,7 @@ const UserProductDetails = ({ route, navigation }) => {
                 )}
               </View>
             </View>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
 
@@ -461,6 +409,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    backgroundColor: '#fafafa',
   },
   backBtn: {
     position: 'absolute',
@@ -541,6 +490,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#8A8A8F',
     marginRight: 16,
+  },
+  colorValue: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   colorDots: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  FlatList,
+  RefreshControl,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import Fonts from '../../config/Fonts';
@@ -18,10 +20,61 @@ const STATUS_TABS = ['New', 'Processing', 'Shipped', 'Delivered'];
 
 const VendorOrders = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('New');
+  const [page, setPage] = useState(1);
+  const [allOrders, setAllOrders] = useState([]);
+  const [lastPage, setLastPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const statusParam = activeTab.toLowerCase() === 'new' ? 'pending' : activeTab.toLowerCase();
-  const { data: ordersResponse, isFetching } = useGetVendorOrdersQuery({ status: statusParam });
-  const apiOrders = ordersResponse?.data || [];
+  const statusParam =
+    activeTab.toLowerCase() === 'new' ? 'pending' : activeTab.toLowerCase();
+  const {
+    data: ordersResponse,
+    isFetching,
+    refetch,
+  } = useGetVendorOrdersQuery({
+    status: statusParam,
+    page,
+  });
+
+  useEffect(() => {
+    setPage(1);
+    setAllOrders([]);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const rawOrders = ordersResponse?.data;
+    if (rawOrders && Array.isArray(rawOrders)) {
+      if (page === 1) {
+        setAllOrders(rawOrders);
+      } else {
+        setAllOrders(prev => {
+          const existingIds = new Set(prev.map(o => o.id));
+          const newOrders = rawOrders.filter(o => !existingIds.has(o.id));
+          return [...prev, ...newOrders];
+        });
+      }
+    }
+
+    if (ordersResponse?.meta?.last_page) {
+      setLastPage(ordersResponse.meta.last_page);
+    }
+  }, [ordersResponse, page]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    if (page === 1) {
+      await refetch();
+    } else {
+      setPage(1);
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!isFetching && page < lastPage) {
+      setPage(prev => prev + 1);
+    }
+  };
 
   const formatTime = createdAt => {
     if (!createdAt) return '1 hour ago';
@@ -51,12 +104,15 @@ const VendorOrders = ({ navigation }) => {
       firstItem?.image ||
       null;
     const itemsCount = apiOrder.items?.length || 1;
-    const itemsInfo = `${itemsCount} Item${
-      itemsCount > 1 ? 's' : ''
-    } - $${apiOrder.total}`;
+    const itemsInfo = `${itemsCount} Item${itemsCount > 1 ? 's' : ''} - $${
+      apiOrder.total
+    }`;
 
     const customerName = apiOrder.user
-      ? [apiOrder.user.name, apiOrder.user.last_name].filter(Boolean).join(' ').trim() || 'Customer'
+      ? [apiOrder.user.name, apiOrder.user.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Customer'
       : 'Customer';
 
     return {
@@ -80,7 +136,7 @@ const VendorOrders = ({ navigation }) => {
     };
   };
 
-  const filteredOrders = apiOrders.map(mapApiOrderToUi).filter(Boolean);
+  const filteredOrders = allOrders.map(mapApiOrderToUi).filter(Boolean);
 
   const getStatusBadge = status => {
     switch (status) {
@@ -130,93 +186,106 @@ const VendorOrders = ({ navigation }) => {
       </View>
 
       {/* Orders List Container */}
-      <ScrollView
+      <FlatList
+        data={filteredOrders}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
-      >
-        {isFetching ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        ) : filteredOrders.length > 0 ? (
-          <View style={styles.ordersBox}>
-            {filteredOrders.map((ord, index) => {
-              const badgeColors = getStatusBadge(ord.status);
-              const formattedId = ord.id.startsWith('ord-')
-                ? ord.id.replace('ord-', '#')
-                : `#${ord.id}`;
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#DBA83A']}
+            tintColor="#DBA83A"
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        ListEmptyComponent={
+          isFetching && page === 1 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Feather name="file-text" size={48} color="#DEDEDE" />
+              <AppText style={styles.emptyText}>
+                No orders in {activeTab}
+              </AppText>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          isFetching && page > 1 ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color="#DBA83A" />
+            </View>
+          ) : null
+        }
+        renderItem={({ item: ord }) => {
+          const badgeColors = getStatusBadge(ord.status);
+          const formattedId = ord.id.startsWith('ord-')
+            ? ord.id.replace('ord-', '#')
+            : `#${ord.id}`;
 
-              return (
-                <TouchableOpacity
-                  key={ord.id}
+          return (
+            <TouchableOpacity
+              style={styles.orderCard}
+              onPress={() =>
+                navigation.navigate('VendorOrderDetails', { order: ord })
+              }
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{
+                  uri:
+                    ord.image ||
+                    'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+                }}
+                style={styles.orderImage}
+              />
+
+              <View style={styles.orderMidCol}>
+                <AppText style={styles.orderNum}>Order {formattedId}</AppText>
+                <AppText style={styles.customerName}>
+                  {ord.customerName}
+                </AppText>
+                <AppText style={styles.itemsSub}>
+                  {ord.itemsInfo || `1 Item - $${ord.price}`}
+                </AppText>
+              </View>
+
+              <View style={styles.orderRightCol}>
+                <View
                   style={[
-                    styles.orderRow,
-                    index < filteredOrders.length - 1 && styles.rowDivider,
+                    styles.statusBadge,
+                    {
+                      backgroundColor: badgeColors.bg,
+                      borderColor: badgeColors.border,
+                    },
                   ]}
-                  onPress={() =>
-                    navigation.navigate('VendorOrderDetails', { order: ord })
-                  }
-                  activeOpacity={0.8}
                 >
-                  <Image
-                    source={{
-                      uri:
-                        ord.image ||
-                        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-                    }}
-                    style={styles.orderImage}
-                  />
+                  <AppText
+                    style={[
+                      styles.statusBadgeText,
+                      { color: badgeColors.text },
+                    ]}
+                  >
+                    {ord.status}
+                  </AppText>
+                </View>
+                <AppText style={styles.timeText}>
+                  {ord.created_at || '1 hour ago'}
+                </AppText>
 
-                  <View style={styles.orderMidCol}>
-                    <AppText style={styles.orderNum}>
-                      Order {formattedId}
-                    </AppText>
-                    <AppText style={styles.customerName}>
-                      {ord.customerName}
-                    </AppText>
-                    <AppText style={styles.itemsSub}>
-                      {ord.itemsInfo || `1 Item - $${ord.price}`}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.orderRightCol}>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor: badgeColors.bg,
-                          borderColor: badgeColors.border,
-                        },
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.statusBadgeText,
-                          { color: badgeColors.text },
-                        ]}
-                      >
-                        {ord.status}
-                      </AppText>
-                    </View>
-                    <AppText style={styles.timeText}>
-                      {ord.created_at || '1 hour ago'}
-                    </AppText>
-
-                    <View style={styles.arrowCircle}>
-                      <Feather name="chevron-right" size={14} color="#FFFFFF" />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Feather name="file-text" size={48} color="#DEDEDE" />
-            <AppText style={styles.emptyText}>No orders in {activeTab}</AppText>
-          </View>
-        )}
-      </ScrollView>
+                <View style={styles.arrowCircle}>
+                  <Feather name="chevron-right" size={14} color="#FFFFFF" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
     </View>
   );
 };
@@ -313,12 +382,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 30,
   },
-  ordersBox: {
+  orderCard: {
     backgroundColor: Colors.white,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E2E2',
     paddingHorizontal: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
   },
   orderRow: {
     flexDirection: 'row',
@@ -398,6 +471,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: '#7C7C7C',
+  },
+  footerLoader: {
+    paddingVertical: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

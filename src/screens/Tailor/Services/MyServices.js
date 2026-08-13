@@ -88,7 +88,10 @@ const MyServices = ({ navigation }) => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+          <RefreshControl
+            refreshing={isFetching && !isLoading}
+            onRefresh={refetch}
+          />
         }
       >
         {isLoading ? (

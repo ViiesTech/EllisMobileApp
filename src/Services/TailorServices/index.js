@@ -15,6 +15,14 @@ const getTailorServices = () => {
   };
 };
 
+const getTailors = params => {
+  return {
+    url: Endpoints.tailors,
+    method: apiMethods.get,
+    params,
+  };
+};
+
 const createTailorService = body => {
   return {
     url: `${Endpoints.getTailorServices}/create`,
@@ -38,6 +46,29 @@ const deleteTailorService = id => {
   };
 };
 
+const getTailorBookings = params => {
+  return {
+    url: Endpoints.tailorOrders,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const getTailorDashboard = () => {
+  return {
+    url: 'tailor/dashboard',
+    method: apiMethods.get,
+  };
+};
+
+const updateTailorBookingStatus = ({ id, status }) => {
+  return {
+    url: `${Endpoints.tailorOrders}/${id}/status`,
+    method: apiMethods.post,
+    body: { status },
+  };
+};
+
 export const TailorService = baseApi.injectEndpoints({
   endpoints: build => ({
     getTailorCategories: build.query({
@@ -47,6 +78,10 @@ export const TailorService = baseApi.injectEndpoints({
     getTailorServices: build.query({
       query: getTailorServices,
       providesTags: ['TailorServices'],
+    }),
+    getTailors: build.query({
+      query: getTailors,
+      providesTags: ['Tailors'],
     }),
     createTailorService: build.mutation({
       query: createTailorService,
@@ -60,6 +95,18 @@ export const TailorService = baseApi.injectEndpoints({
       query: deleteTailorService,
       invalidatesTags: ['TailorServices'],
     }),
+    getTailorBookings: build.query({
+      query: getTailorBookings,
+      providesTags: ['TailorBookings'],
+    }),
+    getTailorDashboard: build.query({
+      query: getTailorDashboard,
+      providesTags: ['TailorBookings'],
+    }),
+    updateTailorBookingStatus: build.mutation({
+      query: updateTailorBookingStatus,
+      invalidatesTags: ['TailorBookings'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -72,4 +119,11 @@ export const {
   useCreateTailorServiceMutation,
   useUpdateTailorServiceMutation,
   useDeleteTailorServiceMutation,
+  useGetTailorsQuery,
+  useLazyGetTailorsQuery,
+  useGetTailorBookingsQuery,
+  useLazyGetTailorBookingsQuery,
+  useGetTailorDashboardQuery,
+  useLazyGetTailorDashboardQuery,
+  useUpdateTailorBookingStatusMutation,
 } = TailorService;

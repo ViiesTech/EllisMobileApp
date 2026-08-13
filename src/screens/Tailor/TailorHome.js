@@ -6,24 +6,119 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { useSelector } from 'react-redux';
-import { selectBookings } from '../../store/bookingSlice';
 import { selectUser } from '../../store/authSlice';
+import {
+  useGetTailorBookingsQuery,
+  useGetTailorDashboardQuery,
+} from '../../Services/TailorServices';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = (screenWidth - 40 - 36) / 4; // 40 for screen padding, 36 for 3 gaps of 12
 
+const mapApiBookingToUi = b => {
+  const mapStatus = status => {
+    if (!status) return 'Pending';
+    const s = status.toLowerCase();
+    if (s === 'pending') return 'Pending';
+    if (s === 'accepted') return 'Accepted';
+    if (s === 'in_progress' || s === 'in-progress') return 'In Progress';
+    if (s === 'delivered') return 'Delivered';
+    if (s === 'completed') return 'Completed';
+    if (s === 'rejected') return 'Rejected';
+    return status;
+  };
+
+  const constructMeasurementDetails = item => {
+    return (
+      `Suit Type: ${item.suit_type || '2 Piece'}\n` +
+      `Fit Type: ${item.fit_type || 'Slim'}\n` +
+      `Coat Measurements: Length: ${item.coat_length || 0} in, Shoulder: ${
+        item.shoulder_width || 0
+      } in, Chest: ${item.chest_round || 0} in, Waist: ${
+        item.coat_waist || 0
+      } in, Hip: ${item.coat_hip || 0} in, Sleeve: ${
+        item.sleeves_length || 0
+      } in\n` +
+      `Pant Measurements: Waist: ${item.pant_waist || 0} in, Hip: ${
+        item.pant_hip || 0
+      } in, Length: ${item.pant_length || 0} in, Rise: ${
+        item.rise || 'Regular'
+      }, Leg: ${item.leg || 'Straight'}`
+    );
+  };
+
+  return {
+    id: b.id,
+    customerName:
+      [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Customer',
+    phone: b.phone,
+    address:
+      `${b.address || ''}, ${b.city || ''}, ${b.country || ''}`.replace(
+        /^,\s*|,\s*$/g,
+        '',
+      ) || 'Springfield, United States',
+    shippingAddress: `${b.first_name || ''} ${b.last_name || ''}\n${
+      b.billing_address || b.address || ''
+    }, ${b.billing_city || b.city || ''} ${
+      b.billing_postal_code || b.postal_code || ''
+    }\nPhone: ${b.phone || ''}`,
+    serviceName:
+      b.service_name || (b.service ? b.service.name : 'Custom Fitting'),
+    price: b.total || b.service_price || '0.00',
+    time: b.created_at
+      ? new Date(b.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '12:00 PM',
+    status: mapStatus(b.status),
+    measurementDetails: constructMeasurementDetails(b),
+    // Extra fields
+    suitType: b.suit_type,
+    fitType: b.fit_type,
+    coatLength: b.coat_length,
+    shoulderWidth: b.shoulder_width,
+    chestRound: b.chest_round,
+    coatWaist: b.coat_waist,
+    coatHip: b.coat_hip,
+    sleeveLength: b.sleeves_length,
+    pantWaist: b.pant_waist,
+    pantHip: b.pant_hip,
+    trouserLength: b.pant_length,
+    rise: b.rise,
+    leg: b.leg,
+  };
+};
+
+const formatRevenue = (rev) => {
+  const val = Number(rev) || 0;
+  if (val >= 1000) {
+    return `$${(val / 1000).toFixed(1)}K`;
+  }
+  return `$${val}`;
+};
+
 const TailorHome = ({ navigation }) => {
-  const bookings = useSelector(selectBookings);
   const userProfile = useSelector(selectUser) || {};
 
-  // Filter only pending/new bookings to display
-  const newBookings = bookings.filter(b => b.status === 'Pending');
+  const { data, isLoading } = useGetTailorBookingsQuery({
+    page: 1,
+    per_page: 5,
+    status: 'pending',
+  });
+
+  const { data: dashboardData } = useGetTailorDashboardQuery();
+  const stats = dashboardData?.data || {};
+
+  const bookingsData = data?.data || [];
+  const newBookings = bookingsData.map(mapApiBookingToUi);
 
   return (
     <View style={styles.safeArea}>
@@ -63,7 +158,7 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>24</AppText>
+            <AppText style={styles.statVal}>{stats.pending_bookings ?? 0}</AppText>
             <AppText style={styles.statTitle}>New{'\n'}Bookings</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -80,7 +175,9 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>7</AppText>
+            <AppText style={styles.statVal}>
+              {(stats.accepted_bookings ?? 0) + (stats.in_progress_bookings ?? 0)}
+            </AppText>
             <AppText style={styles.statTitle}>Active{'\n'}Bookings</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -97,7 +194,7 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>70</AppText>
+            <AppText style={styles.statVal}>{stats.completed_bookings ?? 0}</AppText>
             <AppText style={styles.statTitle}>Completed{'\n'}Bookings</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -114,7 +211,7 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="dollar-sign" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>$1.5K</AppText>
+            <AppText style={styles.statVal}>{formatRevenue(stats.total_revenue)}</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Revenue</AppText>
             <View style={styles.statGrowthBox}>
               <FontAwesome6
@@ -140,7 +237,11 @@ const TailorHome = ({ navigation }) => {
 
         {/* New Bookings Wrapper List Card */}
         <View style={styles.bookingsBox}>
-          {newBookings.length === 0 ? (
+          {isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : newBookings.length === 0 ? (
             <View style={styles.emptyContainer}>
               <AppText style={styles.emptyText}>No new bookings found.</AppText>
             </View>

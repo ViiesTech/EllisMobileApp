@@ -23,27 +23,32 @@ const ProductDetails = ({ route, navigation }) => {
     useDeleteProductMutation();
 
   const getProductImages = () => {
-    let extracted = [];
-    if (Array.isArray(product?.images) && product.images.length > 0) {
-      extracted = product.images;
-    } else if (
-      typeof product?.images === 'string' &&
-      product.images.trim() !== ''
-    ) {
-      extracted = [product.images];
-    } else if (Array.isArray(product?.images) && product.images.length > 0) {
-      extracted = product.images.map(img =>
-        typeof img === 'string' ? img : img?.uri,
-      );
-    } else if (
-      typeof product?.images === 'string' &&
-      product.images.trim() !== ''
-    ) {
-      extracted = [product.images];
+    const raw = product?.image_url || product?.image || product?.images;
+    if (!raw) {
+      return [
+        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=500&auto=format&fit=crop&q=80',
+      ];
     }
 
-    if (extracted.length > 0) {
-      return extracted;
+    if (Array.isArray(raw)) {
+      return raw
+        .map(img => (typeof img === 'string' ? img : img?.uri))
+        .filter(Boolean);
+    }
+
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map(img => (typeof img === 'string' ? img : img?.uri))
+            .filter(Boolean);
+        }
+      } catch (e) {
+        // Not a JSON array string
+      }
+      return [raw];
     }
 
     return [

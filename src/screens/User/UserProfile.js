@@ -18,6 +18,7 @@ import VendorHeader from '../../components/VendorHeader';
 const UserProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
+  console.log('userProfile:-', userProfile);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -90,18 +91,16 @@ const UserProfile = ({ navigation }) => {
             <Image
               source={{
                 uri:
-                  userProfile.avatar ||
+                  userProfile.user_profile_image ||
                   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
               }}
               style={styles.avatarImage}
             />
           </View>
           <AppText style={styles.userName}>
-            {userProfile.name || 'Alex Charlie'}
+            {userProfile.name + ' ' + userProfile.last_name}
           </AppText>
-          <AppText style={styles.userEmail}>
-            {userProfile.email || 'alexcharlie878@gmail.com'}
-          </AppText>
+          <AppText style={styles.userEmail}>{userProfile.email}</AppText>
         </View>
 
         {/* Menu Items List */}

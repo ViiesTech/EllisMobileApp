@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,39 +6,135 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import { useSelector } from 'react-redux';
-import { selectProducts, selectCart } from '../../store/productSlice';
+import { selectCart } from '../../store/productSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import VendorHeader from '../../components/VendorHeader';
+import {
+  useLazyUserProductsQuery,
+  useUserCategoriesQuery,
+} from '../../Services/UserServices';
 
 const Shop = ({ navigation }) => {
-  const products = useSelector(selectProducts);
   const cart = useSelector(selectCart);
+  const cartTotalItems = cart.length;
 
-  const categories = ['All', 'Cotton', 'Wool', 'Silk Blend', 'Merino Wool'];
+  // Dynamic Categories Fetch
+  const { data: categoriesData } = useUserCategoriesQuery();
+  const categoriesList = categoriesData?.data || [];
+  const categories = ['All', ...categoriesList.map(cat => cat.name)];
+
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [productsList, setProductsList] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const cartTotalItems = cart.reduce((acc, i) => acc + i.qty, 0);
+  const [triggerGetProducts, { isFetching }] = useLazyUserProductsQuery();
 
-  const filteredProducts = products.filter(prod => {
-    if (selectedCategory === 'All') return true;
-    if (!prod.material) return false;
-
-    const mat = prod.material.toLowerCase();
-    const cat = selectedCategory.toLowerCase();
-
-    // Smart match for multi-word categories
-    if (cat === 'silk blend') {
-      return mat.includes('silk') || mat.includes('blend');
+  const fetchProductsList = async (
+    pageNumber,
+    isRefresh = false,
+    categoryName = selectedCategory,
+  ) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoadingMore(true);
     }
-    if (cat === 'merino wool') {
-      return mat.includes('merino') || mat.includes('wool');
+
+    try {
+      const categoryFilter = categoryName === 'All' ? undefined : categoryName;
+      const res = await triggerGetProducts({
+        page: pageNumber,
+        limit: 10,
+        category: categoryFilter,
+      }).unwrap();
+
+      const newProducts = res?.data || [];
+
+      if (newProducts.length < 10) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      if (isRefresh) {
+        setProductsList(newProducts);
+        setPage(1);
+      } else {
+        setProductsList(prev => [...prev, ...newProducts]);
+        setPage(pageNumber);
+      }
+    } catch (err) {
+      console.log('Error fetching products:', err);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+      setLoadingMore(false);
     }
-    return mat.includes(cat);
-  });
+  };
+
+  useEffect(() => {
+    setHasMore(true);
+    fetchProductsList(1, true, selectedCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]);
+
+  const onRefresh = () => {
+    setHasMore(true);
+    fetchProductsList(1, true, selectedCategory);
+  };
+
+  const onLoadMore = () => {
+    if (!loadingMore && !isFetching && hasMore) {
+      fetchProductsList(page + 1, false, selectedCategory);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#DBA83A" />
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (isFetching) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Feather
+          name="shopping-bag"
+          size={48}
+          color="#DEDEDE"
+          style={styles.emptyIcon}
+        />
+        <AppText style={styles.emptyText}>
+          No products found in this category.
+        </AppText>
+      </View>
+    );
+  };
+
+  if (isFetching && productsList.length === 0 && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <VendorHeader navigation={navigation} title="SHOP" goBack={false} />
+        <View style={styles.centerLoader}>
+          <ActivityIndicator size="large" color="#DBA83A" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeArea}>
@@ -77,41 +173,68 @@ const Shop = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {/* Products Grid */}
-      <ScrollView
-        style={styles.container}
+      {/* Products Grid using FlatList for Pagination */}
+      <FlatList
+        data={productsList}
+        keyExtractor={item => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {filteredProducts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <AppText style={styles.emptyText}>
-              No products found in this category.
-            </AppText>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {filteredProducts.map(prod => (
-              <TouchableOpacity
-                key={prod.id}
-                style={styles.gridItem}
-                onPress={() =>
-                  navigation.navigate('ProductDetails', { product: prod })
-                }
-                activeOpacity={0.9}
-              >
-                <Image
-                  source={{ uri: prod.image }}
-                  style={styles.gridItemImage}
-                  resizeMode="cover"
-                />
-                <AppText style={styles.gridItemName}>{prod.name}</AppText>
-                <AppText style={styles.gridItemPrice}>${prod.price}</AppText>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        renderItem={({ item }) => {
+          const price = item.price_per_meter || item.price || '0.00';
+          const rawImage = item.image_url || item.image;
+          let singleImage = Array.isArray(rawImage) ? rawImage[0] : rawImage;
+          if (
+            typeof singleImage === 'string' &&
+            singleImage.trim().startsWith('[') &&
+            singleImage.trim().endsWith(']')
+          ) {
+            try {
+              const parsed = JSON.parse(singleImage);
+              if (Array.isArray(parsed)) {
+                singleImage = parsed[0];
+              }
+            } catch (e) {}
+          }
+          const imageUrl =
+            singleImage ||
+            'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop&q=80';
+          return (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() =>
+                navigation.navigate('ProductDetails', { product: item })
+              }
+              activeOpacity={0.9}
+            >
+              <Image
+                source={{
+                  uri: imageUrl,
+                }}
+                style={styles.gridItemImage}
+                resizeMode="cover"
+              />
+              <AppText style={styles.gridItemName} numberOfLines={1}>
+                {item.name}
+              </AppText>
+              <AppText style={styles.gridItemPrice}>${price}</AppText>
+            </TouchableOpacity>
+          );
+        }}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#DBA83A']}
+            tintColor="#DBA83A"
+          />
+        }
+      />
 
       {/* Floating Cart Button (FAB) */}
       <TouchableOpacity
@@ -137,15 +260,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
   categoriesWrapper: {
-    marginBottom: 20,
+    marginVertical: 14,
   },
   categoriesContainer: {
     paddingHorizontal: 16,
@@ -172,11 +288,12 @@ const styles = StyleSheet.create({
   categoryTextActive: {
     color: '#000000',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  columnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+  },
+  listContent: {
+    paddingBottom: 100,
   },
   gridItem: {
     width: '47%',
@@ -208,12 +325,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 50,
+    marginTop: 80,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 15,
     color: '#8A8A8F',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
+  centerLoader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   floatingCartBtn: {
     position: 'absolute',

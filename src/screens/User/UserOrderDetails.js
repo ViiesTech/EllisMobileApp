@@ -5,6 +5,7 @@ import {
   Image,
   TouchableOpacity,
   Platform,
+  ScrollView,
 } from 'react-native';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
@@ -13,8 +14,12 @@ const UserOrderDetails = ({ route, navigation }) => {
   const { order } = route.params;
 
   const displayOrderId = order.id.replace('ord-', '');
-  const itemsCountText = order.itemsInfo ? order.itemsInfo.split(' - ')[0] : '1 Item';
-  const vendorName = order.customerName === 'Liam James' ? 'Andrew Ainsly' : order.customerName;
+  const itemsCountText = order.itemsInfo
+    ? order.itemsInfo.split(' - ')[0]
+    : '1 Item';
+  const vendorName =
+    order.customerName === 'Liam James' ? 'Andrew Ainsly' : order.customerName;
+  const isPickup = order.shipping_method?.toLowerCase() === 'pickup';
 
   return (
     <View style={styles.safeArea}>
@@ -38,12 +43,17 @@ const UserOrderDetails = ({ route, navigation }) => {
         <View style={styles.headerRightSpacer} />
       </View>
 
-      <View style={styles.contentContainer}>
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Order Header Summary Card */}
         <View style={styles.summaryCard}>
           <Image source={{ uri: order.image }} style={styles.summaryImg} />
           <View style={styles.summaryTextContainer}>
-            <AppText style={styles.orderIdText}>Order #{displayOrderId}</AppText>
+            <AppText style={styles.orderIdText}>
+              Order #{displayOrderId}
+            </AppText>
             <AppText style={styles.priceText}>${order.price}</AppText>
             <AppText style={styles.itemsText}>{itemsCountText}</AppText>
           </View>
@@ -51,16 +61,39 @@ const UserOrderDetails = ({ route, navigation }) => {
 
         {/* Detailed Description Fields */}
         <View style={styles.detailsBlock}>
-          <AppText style={styles.detailLabel}>Product Name</AppText>
-          <AppText style={styles.detailValue}>{order.productName}</AppText>
+          <AppText style={styles.detailLabel}>Ordered Items</AppText>
+          <View style={styles.itemsContainer}>
+            {(order.items || []).map((item, idx) => (
+              <View key={idx} style={styles.itemRow}>
+                <AppText style={styles.itemNameText}>
+                  {item.name || 'Item'}
+                </AppText>
+                <AppText style={styles.itemQtyText}>
+                  x{item.quantity || 1}
+                </AppText>
+              </View>
+            ))}
+          </View>
 
           <AppText style={styles.detailLabel}>Vendor Name</AppText>
           <AppText style={styles.detailValue}>{vendorName}</AppText>
 
-          <AppText style={styles.detailLabel}>Delivery Time</AppText>
-          <AppText style={styles.detailValue}>4 to 5 Days</AppText>
+          {isPickup ? (
+            <>
+              <AppText style={styles.detailLabel}>Store Address</AppText>
+              <AppText style={styles.detailValue}>
+                {order.vendor?.address || 'N/A'}
+                {order.vendor?.city ? `, ${order.vendor.city}` : ''}
+              </AppText>
+            </>
+          ) : (
+            <>
+              <AppText style={styles.detailLabel}>Delivery Time</AppText>
+              <AppText style={styles.detailValue}>4 to 5 Days</AppText>
+            </>
+          )}
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -170,6 +203,28 @@ const styles = StyleSheet.create({
     color: '#8A8A8F',
     marginBottom: 26,
     lineHeight: 18,
+  },
+  itemsContainer: {
+    marginBottom: 26,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#EAEAEA',
+  },
+  itemNameText: {
+    fontSize: 13,
+    color: '#8A8A8F',
+    flex: 1,
+  },
+  itemQtyText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
+    marginLeft: 10,
   },
 });
 

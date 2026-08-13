@@ -108,7 +108,7 @@ export const INITIAL_ORDERS = [
 ];
 
 const initialState = {
-  orders: INITIAL_ORDERS,
+  orders: [],
 };
 
 const orderSlice = createSlice({

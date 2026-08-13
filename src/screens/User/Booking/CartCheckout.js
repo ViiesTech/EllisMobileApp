@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Colors from '../../../config/Colors';
 import Feather from 'react-native-vector-icons/Feather';
@@ -21,6 +22,7 @@ import {
   clearCart,
 } from '../../../store/productSlice';
 import { showToast } from '../../../components/Toast';
+import { usePlaceOrderMutation } from '../../../Services/UserServices';
 
 const MasterCardLogo = () => (
   <View style={styles.mcLogoContainer}>
@@ -37,43 +39,45 @@ const CartCheckout = ({ navigation }) => {
   const [step, setStep] = useState('CART');
   const [shippingMethod, setShippingMethod] = useState('PICKUP'); // 'PICKUP' | 'DELIVERY'
   const [showSuccess, setShowSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState(null);
+
+  const [placeOrderMutation, { isLoading: isPlacingOrder }] =
+    usePlaceOrderMutation();
 
   // Address form states (Pre-filled with mockup data for demo)
-  const [firstName, setFirstName] = useState('Alex');
-  const [lastName, setLastName] = useState('Charlie');
-  const [streetAddress, setStreetAddress] = useState(
-    '606-3727 Ullamcorper. Street',
-  );
-  const [city, setCity] = useState('Roseville');
-  const [stateCode, setStateCode] = useState('NH');
-  const [zipCode, setZipCode] = useState('11523');
-  const [phone, setPhone] = useState('(786) 713-8616');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [stateCode, setStateCode] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [phone, setPhone] = useState('');
 
   // Active saved address
   const [savedAddress, setSavedAddress] = useState({
-    firstName: 'Alex',
-    lastName: 'Charlie',
-    address: '606-3727 Ullamcorper. Street',
-    city: 'Roseville',
-    state: 'NH',
-    zip: '11523',
-    phone: '(786) 713-8616',
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
   });
 
   // Card form states (Pre-filled with mockup data for demo)
-  const [cardName, setCardName] = useState('Alex Charlie');
-  const [cardNo, setCardNo] = useState('2365 3654 2365 3698');
-  const [cardExpMonth, setCardExpMonth] = useState('03');
-  const [cardExpYear, setCardExpYear] = useState('25');
-  const [cardCVV, setCardCVV] = useState('999');
+  const [cardName, setCardName] = useState('');
+  const [cardNo, setCardNo] = useState('');
+  const [cardExpMonth, setCardExpMonth] = useState('');
+  const [cardExpYear, setCardExpYear] = useState('');
+  const [cardCVV, setCardCVV] = useState('');
 
   // Active saved card
   const [savedCard, setSavedCard] = useState({
-    name: 'Alex Charlie',
-    number: '2365 3654 2365 3698',
-    expMonth: '03',
-    expYear: '25',
-    cvv: '999',
+    name: '',
+    number: '',
+    expMonth: '',
+    expYear: '',
+    cvv: '',
   });
 
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
@@ -91,57 +95,195 @@ const CartCheckout = ({ navigation }) => {
   };
 
   const handleSaveAddress = () => {
-    if (
-      !firstName ||
-      !lastName ||
-      !streetAddress ||
-      !city ||
-      !stateCode ||
-      !zipCode ||
-      !phone
-    ) {
-      showToast('Error', 'Please fill all address fields.', 'error');
+    if (!firstName.trim()) {
+      showToast('Validation Error', 'First name is required.', 'error');
       return;
     }
+    if (!lastName.trim()) {
+      showToast('Validation Error', 'Last name is required.', 'error');
+      return;
+    }
+    if (!streetAddress.trim()) {
+      showToast('Validation Error', 'Street address is required.', 'error');
+      return;
+    }
+    if (!city.trim()) {
+      showToast('Validation Error', 'City is required.', 'error');
+      return;
+    }
+    if (!stateCode.trim()) {
+      showToast('Validation Error', 'State/Province is required.', 'error');
+      return;
+    }
+    if (!zipCode.trim()) {
+      showToast('Validation Error', 'Zip code is required.', 'error');
+      return;
+    }
+    const cleanZip = zipCode.replace(/\s+/g, '');
+    if (!/^\d{3,10}$/.test(cleanZip)) {
+      showToast(
+        'Validation Error',
+        'Please enter a valid zip code (digits only).',
+        'error',
+      );
+      return;
+    }
+    if (!phone.trim()) {
+      showToast('Validation Error', 'Phone number is required.', 'error');
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 7) {
+      showToast(
+        'Validation Error',
+        'Please enter a valid phone number (at least 7 digits).',
+        'error',
+      );
+      return;
+    }
+
     setSavedAddress({
-      firstName,
-      lastName,
-      address: streetAddress,
-      city,
-      state: stateCode,
-      zip: zipCode,
-      phone,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      address: streetAddress.trim(),
+      city: city.trim(),
+      state: stateCode.trim(),
+      zip: zipCode.trim(),
+      phone: phone.trim(),
     });
     setStep('CHECKOUT');
     showToast('Success', 'Address updated successfully.', 'success');
   };
 
   const handleSaveCard = () => {
-    if (!cardName || !cardNo || !cardExpMonth || !cardExpYear || !cardCVV) {
-      showToast('Error', 'Please fill all card fields.', 'error');
+    if (!cardName.trim()) {
+      showToast('Validation Error', 'Cardholder name is required.', 'error');
       return;
     }
+    if (!cardNo.trim()) {
+      showToast('Validation Error', 'Card number is required.', 'error');
+      return;
+    }
+    const cleanCardNo = cardNo.replace(/[\s-]/g, '');
+    if (!/^\d{13,19}$/.test(cleanCardNo)) {
+      showToast(
+        'Validation Error',
+        'Please enter a valid card number (13-19 digits).',
+        'error',
+      );
+      return;
+    }
+    if (!cardExpMonth.trim()) {
+      showToast('Validation Error', 'Expiry month is required.', 'error');
+      return;
+    }
+    const monthVal = parseInt(cardExpMonth, 10);
+    if (isNaN(monthVal) || monthVal < 1 || monthVal > 12) {
+      showToast(
+        'Validation Error',
+        'Expiry month must be between 01 and 12.',
+        'error',
+      );
+      return;
+    }
+    if (!cardExpYear.trim()) {
+      showToast('Validation Error', 'Expiry year is required.', 'error');
+      return;
+    }
+    const cleanYear = cardExpYear.replace(/\D/g, '');
+    if (cleanYear.length !== 2 && cleanYear.length !== 4) {
+      showToast(
+        'Validation Error',
+        'Expiry year must be 2 or 4 digits (e.g. 27 or 2027).',
+        'error',
+      );
+      return;
+    }
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    let fullExpYear = parseInt(cleanYear, 10);
+    if (cleanYear.length === 2) {
+      fullExpYear += 2000;
+    }
+    if (
+      fullExpYear < currentYear ||
+      (fullExpYear === currentYear && monthVal < currentMonth)
+    ) {
+      showToast('Validation Error', 'This card has already expired.', 'error');
+      return;
+    }
+    if (!cardCVV.trim()) {
+      showToast('Validation Error', 'CVV is required.', 'error');
+      return;
+    }
+    const cleanCVV = cardCVV.replace(/\D/g, '');
+    if (cleanCVV.length < 3 || cleanCVV.length > 4) {
+      showToast('Validation Error', 'CVV must be 3 or 4 digits.', 'error');
+      return;
+    }
+
     setSavedCard({
-      name: cardName,
-      number: cardNo,
-      expMonth: cardExpMonth,
-      expYear: cardExpYear,
-      cvv: cardCVV,
+      name: cardName.trim(),
+      number: cardNo.trim(),
+      expMonth: cardExpMonth.trim(),
+      expYear: cardExpYear.trim(),
+      cvv: cardCVV.trim(),
     });
     setStep('CHECKOUT');
     showToast('Success', 'Card details updated successfully.', 'success');
   };
 
-  const handlePlaceOrder = () => {
-    if (!savedAddress) {
+  const handlePlaceOrder = async () => {
+    if (!savedAddress?.address) {
       showToast('Required', 'Please add a shipping address first.', 'error');
       return;
     }
-    if (!savedCard) {
+    if (!savedCard?.number) {
       showToast('Required', 'Please select a payment method first.', 'error');
       return;
     }
-    setShowSuccess(true);
+
+    try {
+      const payload = {
+        products: cart.map(item => ({
+          product_id: item.id,
+          quantity: item.qty,
+        })),
+        shipping_address: savedAddress.address,
+        city: savedAddress.city,
+        state: savedAddress.state,
+        zip_code: savedAddress.zip,
+        phone_number: savedAddress.phone,
+        shipping_method: shippingMethod === 'PICKUP' ? 'Pickup' : 'Standard',
+        payment_method: 'Cash on Delivery',
+      };
+
+      const response = await placeOrderMutation(payload).unwrap();
+      if (response?.success) {
+        const orderId = response?.data?.order?.id;
+        setPlacedOrderId(orderId);
+        dispatch(clearCart());
+        setShowSuccess(true);
+        showToast(
+          'Success',
+          response?.message || 'Order placed successfully.',
+          'success',
+        );
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to place order.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('Error placing order:', err);
+      showToast(
+        'Error',
+        err?.data?.message || err?.message || 'Network error occurred.',
+        'error',
+      );
+    }
   };
 
   const handleSuccessClose = () => {
@@ -179,516 +321,523 @@ const CartCheckout = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.mainContainer}>
-      {/* Top Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={handleBackPress}
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={24} color="#000000" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <AppText style={styles.headerTitle}>{getHeaderTitle()}</AppText>
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <View style={styles.diamond} />
-            <View style={styles.dividerLine} />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.mainContainer}>
+        {/* Top Header */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={24} color="#000000" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <AppText style={styles.headerTitle}>{getHeaderTitle()}</AppText>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <View style={styles.diamond} />
+              <View style={styles.dividerLine} />
+            </View>
           </View>
+          <View style={styles.headerRightSpacer} />
         </View>
-        <View style={styles.headerRightSpacer} />
-      </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* STEP 1: CART VIEW (IMAGE 1) */}
-        {step === 'CART' && (
-          <View style={styles.section}>
-            {cart.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <AppText style={styles.emptyIcon}>🛍️</AppText>
-                <AppText style={styles.emptyTitle}>Your Cart is Empty</AppText>
-                <AppText style={styles.emptySub}>
-                  Explore fabrics & suits to add items to your cart.
-                </AppText>
-              </View>
-            ) : (
-              <>
-                {cart.map(item => (
-                  <View key={item.id} style={styles.cartItem}>
-                    <Image
-                      source={{ uri: item.image }}
-                      style={styles.itemImg}
-                    />
-                    <View style={styles.cartItemTextContainer}>
-                      <AppText style={styles.itemName} numberOfLines={1}>
-                        {item.name.toUpperCase()}
-                      </AppText>
-                      <AppText style={styles.itemCategory}>
-                        {item.description || 'Lorem Ipsum Dummy'}
-                      </AppText>
-
-                      <View style={styles.qtyControls}>
-                        <TouchableOpacity
-                          style={[
-                            styles.qtySubBtn,
-                            item.qty <= 1 && styles.qtySubBtnDisabled,
-                          ]}
-                          onPress={() =>
-                            dispatch(updateCartQty({ id: item.id, delta: -1 }))
-                          }
-                          disabled={item.qty <= 1}
-                          activeOpacity={0.7}
-                        >
-                          <AppText
-                            style={[
-                              styles.qtySubText,
-                              item.qty <= 1 && styles.qtySubTextDisabled,
-                            ]}
-                          >
-                            -
-                          </AppText>
-                        </TouchableOpacity>
-                        <AppText style={styles.qtyVal}>{item.qty}</AppText>
-                        <TouchableOpacity
-                          style={styles.qtySubBtn}
-                          onPress={() =>
-                            dispatch(updateCartQty({ id: item.id, delta: 1 }))
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <AppText style={styles.qtySubText}>+</AppText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={styles.trashIconContainer}
-                          onPress={() => dispatch(removeFromCart(item.id))}
-                          activeOpacity={0.7}
-                        >
-                          <Feather
-                            name="trash-2"
-                            size={18}
-                            color={Colors.red}
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      <AppText style={styles.itemPrice}>${item.price}</AppText>
-                    </View>
-                  </View>
-                ))}
-
-                {/* Delivery Option Row (Image 1) */}
-                <View style={styles.deliveryRowContainer}>
-                  <View style={styles.deliveryIconBox}>
-                    <Feather name="package" size={20} color="#000000" />
-                  </View>
-                  <AppText style={styles.deliveryLabel}>Delivery</AppText>
-                  <AppText style={styles.deliveryValue}>Free</AppText>
+        <ScrollView
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* STEP 1: CART VIEW (IMAGE 1) */}
+          {step === 'CART' && (
+            <View style={styles.section}>
+              {cart.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <AppText style={styles.emptyIcon}>🛍️</AppText>
+                  <AppText style={styles.emptyTitle}>
+                    Your Cart is Empty
+                  </AppText>
+                  <AppText style={styles.emptySub}>
+                    Explore fabrics & suits to add items to your cart.
+                  </AppText>
                 </View>
-              </>
-            )}
-          </View>
-        )}
+              ) : (
+                <>
+                  {cart.map(item => (
+                    <View key={item.id} style={styles.cartItem}>
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.itemImg}
+                      />
+                      <View style={styles.cartItemTextContainer}>
+                        <AppText style={styles.itemName} numberOfLines={1}>
+                          {item.name.toUpperCase()}
+                        </AppText>
+                        <AppText style={styles.itemCategory}>
+                          {item.description || 'Lorem Ipsum Dummy'}
+                        </AppText>
 
-        {/* STEP 2: CHECKOUT DETAILED SUMMARY VIEW (IMAGE 2 & IMAGE 4) */}
-        {step === 'CHECKOUT' && (
-          <View style={styles.section}>
-            {/* SHIPPING ADDRESS SECTION */}
-            <AppText style={styles.sectionHeader}>SHIPPING ADDRESS</AppText>
-            {savedAddress ? (
+                        <View style={styles.qtyControls}>
+                          <TouchableOpacity
+                            style={[
+                              styles.qtySubBtn,
+                              item.qty <= 1 && styles.qtySubBtnDisabled,
+                            ]}
+                            onPress={() =>
+                              dispatch(
+                                updateCartQty({ id: item.id, delta: -1 }),
+                              )
+                            }
+                            disabled={item.qty <= 1}
+                            activeOpacity={0.7}
+                          >
+                            <AppText
+                              style={[
+                                styles.qtySubText,
+                                item.qty <= 1 && styles.qtySubTextDisabled,
+                              ]}
+                            >
+                              -
+                            </AppText>
+                          </TouchableOpacity>
+                          <AppText style={styles.qtyVal}>{item.qty}</AppText>
+                          <TouchableOpacity
+                            style={styles.qtySubBtn}
+                            onPress={() =>
+                              dispatch(updateCartQty({ id: item.id, delta: 1 }))
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <AppText style={styles.qtySubText}>+</AppText>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.trashIconContainer}
+                            onPress={() => dispatch(removeFromCart(item.id))}
+                            activeOpacity={0.7}
+                          >
+                            <Feather
+                              name="trash-2"
+                              size={18}
+                              color={Colors.red}
+                            />
+                          </TouchableOpacity>
+                        </View>
+
+                        <AppText style={styles.itemPrice}>
+                          ${item.price}
+                        </AppText>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+          )}
+
+          {/* STEP 2: CHECKOUT DETAILED SUMMARY VIEW (IMAGE 2 & IMAGE 4) */}
+          {step === 'CHECKOUT' && (
+            <View style={styles.section}>
+              {/* SHIPPING ADDRESS SECTION */}
+              <AppText style={styles.sectionHeader}>SHIPPING ADDRESS</AppText>
+              {savedAddress?.address ? (
+                <TouchableOpacity
+                  style={styles.addressDisplayCard}
+                  onPress={() => setStep('ADD_ADDRESS')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.flex1}>
+                    <AppText style={styles.addressName}>
+                      {savedAddress.firstName} {savedAddress.lastName}
+                    </AppText>
+                    <AppText style={styles.addressText}>
+                      {savedAddress.address}
+                    </AppText>
+                    <AppText style={styles.addressText}>
+                      {savedAddress.city} {savedAddress.state}{' '}
+                      {savedAddress.zip}
+                    </AppText>
+                    <AppText style={styles.addressText}>
+                      {savedAddress.phone}
+                    </AppText>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#8A8A8F" />
+                </TouchableOpacity>
+              ) : null}
+
+              {/* Add Address Pill Button (Image 2) */}
               <TouchableOpacity
-                style={styles.addressDisplayCard}
+                style={styles.addAddressPill}
                 onPress={() => setStep('ADD_ADDRESS')}
                 activeOpacity={0.8}
               >
-                <View style={styles.flex1}>
-                  <AppText style={styles.addressName}>
-                    {savedAddress.firstName} {savedAddress.lastName}
-                  </AppText>
-                  <AppText style={styles.addressText}>
-                    {savedAddress.address}
-                  </AppText>
-                  <AppText style={styles.addressText}>
-                    {savedAddress.city} {savedAddress.state} {savedAddress.zip}
-                  </AppText>
-                  <AppText style={styles.addressText}>
-                    {savedAddress.phone}
-                  </AppText>
-                </View>
-                <Feather name="chevron-right" size={20} color="#8A8A8F" />
-              </TouchableOpacity>
-            ) : null}
-
-            {/* Add Address Pill Button (Image 2) */}
-            <TouchableOpacity
-              style={styles.addAddressPill}
-              onPress={() => setStep('ADD_ADDRESS')}
-              activeOpacity={0.8}
-            >
-              <AppText style={styles.addAddressPillText}>
-                Add shipping address
-              </AppText>
-              <Feather name="plus" size={18} color="#000000" />
-            </TouchableOpacity>
-
-            {/* SHIPPING METHOD SECTION */}
-            <AppText style={styles.sectionHeader}>SHIPPING METHOD</AppText>
-            <TouchableOpacity
-              style={styles.shippingMethodCard}
-              onPress={() =>
-                setShippingMethod(prev =>
-                  prev === 'PICKUP' ? 'DELIVERY' : 'PICKUP',
-                )
-              }
-              activeOpacity={0.8}
-            >
-              <AppText style={styles.shippingMethodText}>
-                {shippingMethod === 'PICKUP'
-                  ? 'Pickup at store'
-                  : 'Home Delivery'}
-              </AppText>
-              <View style={styles.shippingMethodPriceRow}>
-                <AppText style={styles.shippingMethodPrice}>
-                  {shippingMethod === 'PICKUP' ? 'FREE' : '$15.00'}
+                <AppText style={styles.addAddressPillText}>
+                  Add shipping address
                 </AppText>
-                <Feather
-                  name="chevron-down"
-                  size={16}
-                  color="#8A8A8F"
-                  style={styles.chevronDown}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {/* PAYMENT METHOD SECTION */}
-            <AppText style={styles.sectionHeader}>PAYMENT METHOD</AppText>
-            {savedCard ? (
-              <TouchableOpacity
-                style={styles.paymentCardDisplay}
-                onPress={() => setStep('ADD_PAYMENT')}
-                activeOpacity={0.8}
-              >
-                <MasterCardLogo />
-                <AppText style={styles.paymentCardText}>
-                  Master Card ending ••••{savedCard.number.slice(-2)}
-                </AppText>
-                <Feather
-                  name="chevron-right"
-                  size={20}
-                  color="#8A8A8F"
-                  style={styles.chevronRightAligned}
-                />
+                <Feather name="plus" size={18} color="#000000" />
               </TouchableOpacity>
-            ) : (
+
+              {/* SHIPPING METHOD SECTION */}
+              <AppText style={styles.sectionHeader}>SHIPPING METHOD</AppText>
               <TouchableOpacity
                 style={styles.shippingMethodCard}
-                onPress={() => setStep('ADD_PAYMENT')}
+                onPress={() =>
+                  setShippingMethod(prev =>
+                    prev === 'PICKUP' ? 'DELIVERY' : 'PICKUP',
+                  )
+                }
                 activeOpacity={0.8}
               >
                 <AppText style={styles.shippingMethodText}>
-                  select payment method
+                  {shippingMethod === 'PICKUP'
+                    ? 'Pickup at store'
+                    : 'Home Delivery'}
                 </AppText>
-                <Feather name="chevron-down" size={16} color="#8A8A8F" />
+                <View style={styles.shippingMethodPriceRow}>
+                  <AppText style={styles.shippingMethodPrice}>
+                    {shippingMethod === 'PICKUP' ? 'FREE' : '$15.00'}
+                  </AppText>
+                  <Feather
+                    name="chevron-down"
+                    size={16}
+                    color="#8A8A8F"
+                    style={styles.chevronDown}
+                  />
+                </View>
               </TouchableOpacity>
-            )}
 
-            {/* PRODUCT SUMMARY (IMAGE 4) */}
-            {cart.length > 0 && (
-              <View style={styles.productSummaryList}>
-                {cart.map(item => (
-                  <View
-                    key={`summary-${item.id}`}
-                    style={styles.cartItemSummary}
-                  >
-                    <Image
-                      source={{ uri: item.image }}
-                      style={styles.itemImgSummary}
-                    />
-                    <View style={styles.cartItemTextContainer}>
-                      <AppText style={styles.itemNameSummary}>
-                        {item.name.toUpperCase()}
-                      </AppText>
-                      <AppText style={styles.itemCategorySummary}>
-                        {item.description || 'Lorem Ipsum Dummy'}
-                      </AppText>
-                      <View style={styles.qtyRowSummary}>
-                        <TouchableOpacity
-                          style={[
-                            styles.qtySubBtn,
-                            item.qty <= 1 && styles.qtySubBtnDisabled,
-                          ]}
-                          onPress={() =>
-                            dispatch(updateCartQty({ id: item.id, delta: -1 }))
-                          }
-                          disabled={item.qty <= 1}
-                          activeOpacity={0.7}
-                        >
-                          <AppText
+              {/* PAYMENT METHOD SECTION */}
+              <AppText style={styles.sectionHeader}>PAYMENT METHOD</AppText>
+              {savedCard ? (
+                <TouchableOpacity
+                  style={styles.paymentCardDisplay}
+                  onPress={() => setStep('ADD_PAYMENT')}
+                  activeOpacity={0.8}
+                >
+                  <MasterCardLogo />
+                  <AppText style={styles.paymentCardText}>
+                    Master Card ending ••••{savedCard.number.slice(-2)}
+                  </AppText>
+                  <Feather
+                    name="chevron-right"
+                    size={20}
+                    color="#8A8A8F"
+                    style={styles.chevronRightAligned}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.shippingMethodCard}
+                  onPress={() => setStep('ADD_PAYMENT')}
+                  activeOpacity={0.8}
+                >
+                  <AppText style={styles.shippingMethodText}>
+                    select payment method
+                  </AppText>
+                  <Feather name="chevron-down" size={16} color="#8A8A8F" />
+                </TouchableOpacity>
+              )}
+
+              {/* PRODUCT SUMMARY (IMAGE 4) */}
+              {cart.length > 0 && (
+                <View style={styles.productSummaryList}>
+                  {cart.map(item => (
+                    <View
+                      key={`summary-${item.id}`}
+                      style={styles.cartItemSummary}
+                    >
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.itemImgSummary}
+                      />
+                      <View style={styles.cartItemTextContainer}>
+                        <AppText style={styles.itemNameSummary}>
+                          {item.name.toUpperCase()}
+                        </AppText>
+                        <AppText style={styles.itemCategorySummary}>
+                          {item.description || 'Lorem Ipsum Dummy'}
+                        </AppText>
+                        <View style={styles.qtyRowSummary}>
+                          <TouchableOpacity
                             style={[
-                              styles.qtySubText,
-                              item.qty <= 1 && styles.qtySubTextDisabled,
+                              styles.qtySubBtn,
+                              item.qty <= 1 && styles.qtySubBtnDisabled,
                             ]}
+                            onPress={() =>
+                              dispatch(
+                                updateCartQty({ id: item.id, delta: -1 }),
+                              )
+                            }
+                            disabled={item.qty <= 1}
+                            activeOpacity={0.7}
                           >
-                            -
-                          </AppText>
-                        </TouchableOpacity>
-                        <AppText style={styles.qtyVal}>{item.qty}</AppText>
-                        <TouchableOpacity
-                          style={styles.qtySubBtn}
-                          onPress={() =>
-                            dispatch(updateCartQty({ id: item.id, delta: 1 }))
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <AppText style={styles.qtySubText}>+</AppText>
-                        </TouchableOpacity>
+                            <AppText
+                              style={[
+                                styles.qtySubText,
+                                item.qty <= 1 && styles.qtySubTextDisabled,
+                              ]}
+                            >
+                              -
+                            </AppText>
+                          </TouchableOpacity>
+                          <AppText style={styles.qtyVal}>{item.qty}</AppText>
+                          <TouchableOpacity
+                            style={styles.qtySubBtn}
+                            onPress={() =>
+                              dispatch(updateCartQty({ id: item.id, delta: 1 }))
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <AppText style={styles.qtySubText}>+</AppText>
+                          </TouchableOpacity>
+                        </View>
+                        <AppText style={styles.itemPriceSummary}>
+                          ${item.price}
+                        </AppText>
                       </View>
-                      <AppText style={styles.itemPriceSummary}>
-                        ${item.price}
-                      </AppText>
                     </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* STEP 3: ADD SHIPPING ADDRESS VIEW (IMAGE 3) */}
+          {step === 'ADD_ADDRESS' && (
+            <View style={styles.formSection}>
+              <View style={styles.rowFields}>
+                <View style={[styles.flex1, styles.marginRight12]}>
+                  <TextInput
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholder="First name"
+                    placeholderTextColor="#A3A3A3"
+                    style={styles.minimalInput}
+                  />
+                </View>
+                <View style={styles.flex1}>
+                  <TextInput
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholder="Last name"
+                    placeholderTextColor="#A3A3A3"
+                    style={styles.minimalInput}
+                  />
+                </View>
+              </View>
+
+              <TextInput
+                value={streetAddress}
+                onChangeText={setStreetAddress}
+                placeholder="Address"
+                placeholderTextColor="#A3A3A3"
+                style={styles.minimalInput}
+              />
+
+              <TextInput
+                value={city}
+                onChangeText={setCity}
+                placeholder="City"
+                placeholderTextColor="#A3A3A3"
+                style={styles.minimalInput}
+              />
+
+              <View style={styles.rowFields}>
+                <View style={[styles.flex1, styles.marginRight12]}>
+                  <TextInput
+                    value={stateCode}
+                    onChangeText={setStateCode}
+                    placeholder="State"
+                    placeholderTextColor="#A3A3A3"
+                    style={styles.minimalInput}
+                  />
+                </View>
+                <View style={styles.flex1}>
+                  <TextInput
+                    value={zipCode}
+                    onChangeText={setZipCode}
+                    placeholder="ZIP code"
+                    placeholderTextColor="#A3A3A3"
+                    keyboardType="numeric"
+                    style={styles.minimalInput}
+                  />
+                </View>
+              </View>
+
+              <TextInput
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Phone number"
+                placeholderTextColor="#A3A3A3"
+                keyboardType="phone-pad"
+                style={styles.minimalInput}
+              />
+            </View>
+          )}
+
+          {/* STEP 4: ADD PAYMENT VIEW (IMAGE 5) */}
+          {step === 'ADD_PAYMENT' && (
+            <View style={styles.formSection}>
+              {/* Premium Credit Card Display Visual */}
+              <View style={styles.premiumCC}>
+                <View style={styles.ccTopRow}>
+                  <View style={styles.ccChip} />
+                  <MasterCardLogo />
+                </View>
+                <AppText style={styles.ccCardNumber}>
+                  {cardNo ? formatCardNumber(cardNo) : '•••• •••• •••• ••••'}
+                </AppText>
+                <View style={styles.ccBottomRow}>
+                  <View>
+                    <AppText style={styles.ccLabel}>Card Holder</AppText>
+                    <AppText style={styles.ccValue}>
+                      {cardName ? cardName.toUpperCase() : 'ALEX CHARLIE'}
+                    </AppText>
                   </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* STEP 3: ADD SHIPPING ADDRESS VIEW (IMAGE 3) */}
-        {step === 'ADD_ADDRESS' && (
-          <View style={styles.formSection}>
-            <View style={styles.rowFields}>
-              <View style={[styles.flex1, styles.marginRight12]}>
-                <TextInput
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="First name"
-                  placeholderTextColor="#A3A3A3"
-                  style={styles.minimalInput}
-                />
-              </View>
-              <View style={styles.flex1}>
-                <TextInput
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Last name"
-                  placeholderTextColor="#A3A3A3"
-                  style={styles.minimalInput}
-                />
-              </View>
-            </View>
-
-            <TextInput
-              value={streetAddress}
-              onChangeText={setStreetAddress}
-              placeholder="Address"
-              placeholderTextColor="#A3A3A3"
-              style={styles.minimalInput}
-            />
-
-            <TextInput
-              value={city}
-              onChangeText={setCity}
-              placeholder="City"
-              placeholderTextColor="#A3A3A3"
-              style={styles.minimalInput}
-            />
-
-            <View style={styles.rowFields}>
-              <View style={[styles.flex1, styles.marginRight12]}>
-                <TextInput
-                  value={stateCode}
-                  onChangeText={setStateCode}
-                  placeholder="State"
-                  placeholderTextColor="#A3A3A3"
-                  style={styles.minimalInput}
-                />
-              </View>
-              <View style={styles.flex1}>
-                <TextInput
-                  value={zipCode}
-                  onChangeText={setZipCode}
-                  placeholder="ZIP code"
-                  placeholderTextColor="#A3A3A3"
-                  keyboardType="numeric"
-                  style={styles.minimalInput}
-                />
-              </View>
-            </View>
-
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="Phone number"
-              placeholderTextColor="#A3A3A3"
-              keyboardType="phone-pad"
-              style={styles.minimalInput}
-            />
-          </View>
-        )}
-
-        {/* STEP 4: ADD PAYMENT VIEW (IMAGE 5) */}
-        {step === 'ADD_PAYMENT' && (
-          <View style={styles.formSection}>
-            {/* Premium Credit Card Display Visual */}
-            <View style={styles.premiumCC}>
-              <View style={styles.ccTopRow}>
-                <View style={styles.ccChip} />
-                <MasterCardLogo />
-              </View>
-              <AppText style={styles.ccCardNumber}>
-                {cardNo ? formatCardNumber(cardNo) : '•••• •••• •••• ••••'}
-              </AppText>
-              <View style={styles.ccBottomRow}>
-                <View>
-                  <AppText style={styles.ccLabel}>Card Holder</AppText>
-                  <AppText style={styles.ccValue}>
-                    {cardName ? cardName.toUpperCase() : 'ALEX CHARLIE'}
-                  </AppText>
-                </View>
-                <View style={styles.ccExpiresCol}>
-                  <AppText style={styles.ccLabel}>Expires</AppText>
-                  <AppText style={styles.ccValue}>
-                    {cardExpMonth || '00'}/{cardExpYear || '00'}
-                  </AppText>
+                  <View style={styles.ccExpiresCol}>
+                    <AppText style={styles.ccLabel}>Expires</AppText>
+                    <AppText style={styles.ccValue}>
+                      {cardExpMonth || '00'}/{cardExpYear || '00'}
+                    </AppText>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {/* Diamond Page Indicators */}
-            <View style={styles.diamondsRow}>
-              <View style={styles.diamondDot} />
-              <View style={[styles.diamondDot, styles.diamondDotActive]} />
-              <View style={styles.diamondDot} />
-            </View>
-
-            {/* Card Inputs */}
-            <TextInput
-              value={cardName}
-              onChangeText={setCardName}
-              placeholder="Name On Card"
-              placeholderTextColor="#A3A3A3"
-              style={styles.minimalInput}
-            />
-
-            <TextInput
-              value={cardNo}
-              onChangeText={val => setCardNo(formatCardNumber(val))}
-              placeholder="Card Number"
-              placeholderTextColor="#A3A3A3"
-              keyboardType="numeric"
-              maxLength={19}
-              style={styles.minimalInput}
-            />
-
-            <View style={styles.rowFields}>
-              <View style={[styles.flex1, styles.marginRight12]}>
-                <TextInput
-                  value={cardExpMonth}
-                  onChangeText={setCardExpMonth}
-                  placeholder="Exp Month"
-                  placeholderTextColor="#A3A3A3"
-                  keyboardType="numeric"
-                  maxLength={2}
-                  style={styles.minimalInput}
-                />
+              {/* Diamond Page Indicators */}
+              <View style={styles.diamondsRow}>
+                <View style={styles.diamondDot} />
+                <View style={[styles.diamondDot, styles.diamondDotActive]} />
+                <View style={styles.diamondDot} />
               </View>
-              <View style={styles.flex1}>
-                <TextInput
-                  value={cardExpYear}
-                  onChangeText={setCardExpYear}
-                  placeholder="Exp Date"
-                  placeholderTextColor="#A3A3A3"
-                  keyboardType="numeric"
-                  maxLength={2}
-                  style={styles.minimalInput}
-                />
+
+              {/* Card Inputs */}
+              <TextInput
+                value={cardName}
+                onChangeText={setCardName}
+                placeholder="Name On Card"
+                placeholderTextColor="#A3A3A3"
+                style={styles.minimalInput}
+              />
+
+              <TextInput
+                value={cardNo}
+                onChangeText={val => setCardNo(formatCardNumber(val))}
+                placeholder="Card Number"
+                placeholderTextColor="#A3A3A3"
+                keyboardType="numeric"
+                maxLength={19}
+                style={styles.minimalInput}
+              />
+
+              <View style={styles.rowFields}>
+                <View style={[styles.flex1, styles.marginRight12]}>
+                  <TextInput
+                    value={cardExpMonth}
+                    onChangeText={setCardExpMonth}
+                    placeholder="Exp Month"
+                    placeholderTextColor="#A3A3A3"
+                    keyboardType="numeric"
+                    maxLength={2}
+                    style={styles.minimalInput}
+                  />
+                </View>
+                <View style={styles.flex1}>
+                  <TextInput
+                    value={cardExpYear}
+                    onChangeText={setCardExpYear}
+                    placeholder="Exp Year"
+                    placeholderTextColor="#A3A3A3"
+                    keyboardType="numeric"
+                    maxLength={2}
+                    style={styles.minimalInput}
+                  />
+                </View>
               </View>
+
+              <TextInput
+                value={cardCVV}
+                onChangeText={setCardCVV}
+                placeholder="CVV"
+                placeholderTextColor="#A3A3A3"
+                keyboardType="numeric"
+                maxLength={4}
+                secureTextEntry
+                style={styles.minimalInput}
+              />
             </View>
+          )}
+        </ScrollView>
 
-            <TextInput
-              value={cardCVV}
-              onChangeText={setCardCVV}
-              placeholder="CVV"
-              placeholderTextColor="#A3A3A3"
-              keyboardType="numeric"
-              maxLength={4}
-              secureTextEntry
-              style={styles.minimalInput}
-            />
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Persistent Bottom Bar with Golden Chevron Buttons */}
-      <View style={styles.bottomBar}>
-        {/* Cost Estimation Row (Image 1/2/4) */}
-        {(step === 'CART' || step === 'CHECKOUT') && cart.length > 0 && (
-          <View style={styles.costEstimationRow}>
-            <AppText style={styles.estTotalLabel}>EST. TOTAL</AppText>
-            <AppText style={styles.estTotalPrice}>${grandTotal}</AppText>
-          </View>
-        )}
-
-        {step === 'CART' && (
-          <CustomButton
-            title="Checkout"
-            onPress={() => setStep('CHECKOUT')}
-            disabled={cart.length === 0}
-            hasArrow={true}
-          />
-        )}
-        {step === 'CHECKOUT' && (
-          <CustomButton
-            title="Place Order"
-            onPress={handlePlaceOrder}
-            disabled={cart.length === 0 || !savedAddress || !savedCard}
-            hasArrow={true}
-          />
-        )}
-        {step === 'ADD_ADDRESS' && (
-          <CustomButton
-            title="Add Now"
-            onPress={handleSaveAddress}
-            hasArrow={true}
-          />
-        )}
-        {step === 'ADD_PAYMENT' && (
-          <CustomButton
-            title="Add Card"
-            onPress={handleSaveCard}
-            hasArrow={true}
-          />
-        )}
-      </View>
-
-      {/* Payment Success Modal */}
-      <Modal visible={showSuccess} transparent animationType="fade">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <View style={styles.successIconBox}>
-              <AppText style={styles.checkMark}>✓</AppText>
+        {/* Persistent Bottom Bar with Golden Chevron Buttons */}
+        <View style={styles.bottomBar}>
+          {/* Cost Estimation Row (Image 1/2/4) */}
+          {(step === 'CART' || step === 'CHECKOUT') && cart.length > 0 && (
+            <View style={styles.costEstimationRow}>
+              <AppText style={styles.estTotalLabel}>EST. TOTAL</AppText>
+              <AppText style={styles.estTotalPrice}>${grandTotal}</AppText>
             </View>
-            <AppText style={styles.successTitle}>PAYMENT SUCCESS</AppText>
-            <AppText style={styles.successSub}>
-              Your bespoke order #ORD-8891 has been confirmed.
-            </AppText>
-            <AppText style={styles.successAmount}>${grandTotal}</AppText>
+          )}
 
+          {step === 'CART' && (
             <CustomButton
-              title="Track My Order"
-              onPress={handleSuccessClose}
-              style={styles.trackOrderBtn}
-              hasArrow={false}
+              title="Checkout"
+              onPress={() => setStep('CHECKOUT')}
+              disabled={cart.length === 0}
+              hasArrow={true}
             />
-          </View>
+          )}
+          {step === 'CHECKOUT' && (
+            <CustomButton
+              title="Place Order"
+              onPress={handlePlaceOrder}
+              disabled={cart.length === 0 || !savedAddress || !savedCard}
+              loading={isPlacingOrder}
+              hasArrow={true}
+            />
+          )}
+          {step === 'ADD_ADDRESS' && (
+            <CustomButton
+              title="Add Now"
+              onPress={handleSaveAddress}
+              hasArrow={true}
+            />
+          )}
+          {step === 'ADD_PAYMENT' && (
+            <CustomButton
+              title="Add Card"
+              onPress={handleSaveCard}
+              hasArrow={true}
+            />
+          )}
         </View>
-      </Modal>
-    </View>
+
+        {/* Payment Success Modal */}
+        <Modal visible={showSuccess} transparent animationType="fade">
+          <View style={styles.modalBg}>
+            <View style={styles.modalCard}>
+              <View style={styles.successIconBox}>
+                <AppText style={styles.checkMark}>✓</AppText>
+              </View>
+              <AppText style={styles.successTitle}>PAYMENT SUCCESS</AppText>
+              <AppText style={styles.successSub}>
+                Your bespoke order #ORD-{placedOrderId || '8891'} has been
+                confirmed.
+              </AppText>
+              {/* <AppText style={styles.successAmount}>${grandTotal}</AppText> */}
+
+              <CustomButton
+                title="Track My Order"
+                onPress={handleSuccessClose}
+                style={styles.trackOrderBtn}
+                hasArrow={false}
+              />
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -6,21 +6,26 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import { useSelector } from 'react-redux';
-import { selectProducts, selectCart } from '../../store/productSlice';
+import { selectCart } from '../../store/productSlice';
 import { selectUser } from '../../store/authSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import { AppImages } from '../../assets/images/AppImages';
+import { useUserProductsQuery } from '../../Services/UserServices';
 
 const Home = ({ navigation }) => {
-  const products = useSelector(selectProducts);
+  const { data: productsData, isFetching } = useUserProductsQuery({
+    limit: 100,
+  });
+  const products = productsData?.data || [];
   const cart = useSelector(selectCart);
   const userProfile = useSelector(selectUser) || {};
 
-  const cartTotalItems = cart.reduce((acc, i) => acc + i.qty, 0);
+  const cartTotalItems = cart.length;
 
   return (
     <View style={styles.safeArea}>
@@ -31,7 +36,7 @@ const Home = ({ navigation }) => {
             <Image
               source={{
                 uri:
-                  userProfile.avatar ||
+                  userProfile.user_profile_image ||
                   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
               }}
               style={styles.headerAvatar}
@@ -39,7 +44,7 @@ const Home = ({ navigation }) => {
             <View style={styles.headerTextCol}>
               <AppText style={styles.headerGreeting}>Good Morning 👋</AppText>
               <AppText style={styles.headerName}>
-                {userProfile.name || 'Alex Charlie'}
+                {userProfile.name + ' ' + userProfile.last_name}
               </AppText>
             </View>
           </View>
@@ -53,7 +58,7 @@ const Home = ({ navigation }) => {
         <TouchableOpacity
           style={styles.bannerCard}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('Tailors')}
+          onPress={() => navigation.navigate('NearByTailors')}
         >
           <Image
             source={AppImages.exploreTailors}
@@ -67,7 +72,7 @@ const Home = ({ navigation }) => {
             <TouchableOpacity
               style={styles.bannerExploreBtn}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('Tailors')}
+              onPress={() => navigation.navigate('NearByTailors')}
             >
               <AppText style={styles.bannerExploreText}>Explore</AppText>
             </TouchableOpacity>
@@ -85,25 +90,60 @@ const Home = ({ navigation }) => {
         </View>
 
         {/* Grid Products */}
-        <View style={styles.grid}>
-          {products.map(prod => (
-            <TouchableOpacity
-              key={prod.id}
-              style={styles.gridItem}
-              onPress={() =>
-                navigation.navigate('ProductDetails', { product: prod })
+        {isFetching && products.length === 0 ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#DBA83A" />
+          </View>
+        ) : products.length === 0 ? (
+          <View style={styles.loaderContainer}>
+            <AppText style={styles.emptyText}>No products available.</AppText>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {products.map(prod => {
+              const price = prod.price_per_meter || prod.price || '0.00';
+              const rawImage = prod.image_url || prod.image;
+              let singleImage = Array.isArray(rawImage)
+                ? rawImage[0]
+                : rawImage;
+              if (
+                typeof singleImage === 'string' &&
+                singleImage.trim().startsWith('[') &&
+                singleImage.trim().endsWith(']')
+              ) {
+                try {
+                  const parsed = JSON.parse(singleImage);
+                  if (Array.isArray(parsed)) {
+                    singleImage = parsed[0];
+                  }
+                } catch (e) {}
               }
-              activeOpacity={0.9}
-            >
-              <Image
-                source={{ uri: prod.image }}
-                style={styles.gridItemImage}
-              />
-              <AppText style={styles.gridItemName}>{prod.name}</AppText>
-              <AppText style={styles.gridItemPrice}>${prod.price}</AppText>
-            </TouchableOpacity>
-          ))}
-        </View>
+              const imageUrl =
+                singleImage ||
+                'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80';
+              return (
+                <TouchableOpacity
+                  key={prod.id}
+                  style={styles.gridItem}
+                  onPress={() =>
+                    navigation.navigate('ProductDetails', { product: prod })
+                  }
+                  activeOpacity={0.9}
+                >
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.gridItemImage}
+                    resizeMode="cover"
+                  />
+                  <AppText style={styles.gridItemName} numberOfLines={1}>
+                    {prod.name}
+                  </AppText>
+                  <AppText style={styles.gridItemPrice}>${price}</AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Cart Button (FAB) */}
@@ -333,6 +373,16 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  loaderContainer: {
+    paddingVertical: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#8A8A8F',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
 });
 

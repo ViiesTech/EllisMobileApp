@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,17 +6,19 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
-import { useDispatch } from 'react-redux';
-import { updateBookingStatus } from '../../store/bookingSlice';
+import { useUpdateTailorBookingStatusMutation } from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
 
 const TailorBookingDetails = ({ route, navigation }) => {
-  const dispatch = useDispatch();
   const { booking } = route.params || {};
+  const [updateStatus, { isLoading }] =
+    useUpdateTailorBookingStatusMutation();
+  const [activeAction, setActiveAction] = useState(null);
 
   if (!booking) {
     return (
@@ -26,11 +28,35 @@ const TailorBookingDetails = ({ route, navigation }) => {
     );
   }
 
-  const handleStatusChange = (status) => {
-    dispatch(updateBookingStatus({ id: booking.id, status }));
-    Alert.alert('Status Updated', `Booking has been marked as ${status}.`, [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+  const handleStatusChange = async (status, actionName) => {
+    setActiveAction(actionName);
+    const mapUiStatusToBackend = (s) => {
+      if (s === 'Pending') return 'pending';
+      if (s === 'Accepted') return 'accepted';
+      if (s === 'In Progress') return 'in_progress';
+      if (s === 'Delivered' || s === 'Completed') return 'completed';
+      if (s === 'Rejected' || s === 'Cancelled') return 'cancelled';
+      return s.toLowerCase();
+    };
+
+    try {
+      const response = await updateStatus({
+        id: booking.id,
+        status: mapUiStatusToBackend(status),
+      }).unwrap();
+
+      if (response?.success) {
+        Alert.alert('Status Updated', `Booking has been marked as ${status}.`, [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to update status.');
+      }
+    } catch (err) {
+      Alert.alert('Error', err?.data?.message || 'Server error occurred.');
+    } finally {
+      setActiveAction(null);
+    }
   };
 
   return (
@@ -119,51 +145,71 @@ const TailorBookingDetails = ({ route, navigation }) => {
         {booking.status === 'Pending' && (
           <View style={styles.row}>
             <TouchableOpacity
-              style={[styles.btn, styles.acceptBtn]}
-              onPress={() => handleStatusChange('Accepted')}
+              style={[styles.btn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+              onPress={() => handleStatusChange('Accepted', 'accept')}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
-              <AppText style={styles.acceptBtnText}>Accept</AppText>
+              {isLoading && activeAction === 'accept' ? (
+                <ActivityIndicator size="small" color="#000000" />
+              ) : (
+                <AppText style={styles.acceptBtnText}>Accept</AppText>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.btn, styles.rejectBtn]}
-              onPress={() => handleStatusChange('Rejected')}
+              style={[styles.btn, styles.rejectBtn, isLoading && { opacity: 0.7 }]}
+              onPress={() => handleStatusChange('Cancelled', 'reject')}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
-              <AppText style={styles.rejectBtnText}>Reject</AppText>
+              {isLoading && activeAction === 'reject' ? (
+                <ActivityIndicator size="small" color="#000000" />
+              ) : (
+                <AppText style={styles.rejectBtnText}>Reject</AppText>
+              )}
             </TouchableOpacity>
           </View>
         )}
 
         {booking.status === 'Accepted' && (
           <TouchableOpacity
-            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn]}
-            onPress={() => handleStatusChange('In Progress')}
+            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+            onPress={() => handleStatusChange('In Progress', 'start')}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <AppText style={styles.acceptBtnText}>Start Work</AppText>
+            {isLoading && activeAction === 'start' ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <AppText style={styles.acceptBtnText}>Start Work</AppText>
+            )}
           </TouchableOpacity>
         )}
 
         {booking.status === 'In Progress' && (
           <TouchableOpacity
-            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn]}
-            onPress={() => handleStatusChange('Delivered')}
+            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+            onPress={() => handleStatusChange('Completed', 'deliver')}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <AppText style={styles.acceptBtnText}>Deliver Booking</AppText>
+            {isLoading && activeAction === 'deliver' ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <AppText style={styles.acceptBtnText}>Deliver Booking</AppText>
+            )}
           </TouchableOpacity>
         )}
 
-        {booking.status === 'Delivered' && (
+        {(booking.status === 'Delivered' || booking.status === 'Completed') && (
           <View style={[styles.btn, styles.fullWidthBtn, styles.disabledBtn]}>
             <AppText style={styles.disabledBtnText}>Completed & Delivered</AppText>
           </View>
         )}
 
-        {booking.status === 'Rejected' && (
+        {(booking.status === 'Rejected' || booking.status === 'Cancelled') && (
           <View style={[styles.btn, styles.fullWidthBtn, styles.disabledBtn]}>
-            <AppText style={styles.disabledBtnText}>Booking Rejected</AppText>
+            <AppText style={styles.disabledBtnText}>Booking Rejected / Cancelled</AppText>
           </View>
         )}
       </View>

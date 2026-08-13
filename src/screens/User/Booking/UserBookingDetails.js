@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Image } from 'react-native';
 import Colors from '../../../config/Colors';
 import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
@@ -12,11 +7,14 @@ import Feather from 'react-native-vector-icons/Feather';
 
 const UserBookingDetails = ({ route, navigation }) => {
   const { booking } = route.params || {};
+  console.log('booking:-', booking);
 
   if (!booking) {
     return (
       <View style={styles.errorContainer}>
-        <AppText style={styles.errorText}>No booking details available.</AppText>
+        <AppText style={styles.errorText}>
+          No booking details available.
+        </AppText>
       </View>
     );
   }
@@ -40,12 +38,13 @@ const UserBookingDetails = ({ route, navigation }) => {
           <Image
             source={
               React.isValidElement(booking.image)
-                ? { uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' }
+                ? {
+                    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                  }
                 : typeof booking.image === 'string'
                 ? { uri: booking.image }
                 : booking.image || {
-                    uri:
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
                   }
             }
             style={styles.clientAvatar}
@@ -54,7 +53,10 @@ const UserBookingDetails = ({ route, navigation }) => {
             <AppText style={styles.clientName}>{booking.customerName}</AppText>
             <View style={styles.locationContainer}>
               <Feather name="map-pin" size={12} color="#7C7C7C" />
-              <AppText style={styles.locationText}> {booking.address || 'Chicago, United States'}</AppText>
+              <AppText style={styles.locationText}>
+                {' '}
+                {booking.address || 'Chicago, United States'}
+              </AppText>
             </View>
           </View>
         </View>

@@ -55,6 +55,7 @@ const VendorOrderDetails = ({ route, navigation }) => {
 
   // const handleAccept = () => handleUpdateStatus('Processing', 'accept');
   // const handleReject = () => handleUpdateStatus('Rejected', 'reject');
+  const handleProcess = () => handleUpdateStatus('Processing', 'processing');
   const handleShip = () => handleUpdateStatus('Shipped', 'ship');
   const handleDeliver = () => handleUpdateStatus('Delivered', 'deliver');
 
@@ -63,6 +64,7 @@ const VendorOrderDetails = ({ route, navigation }) => {
     : `#${order.id}`;
 
   console.log('order:->', order);
+  console.log('routeOrder:->', routeOrder);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -119,35 +121,30 @@ const VendorOrderDetails = ({ route, navigation }) => {
 
       {/* Dynamic Action Buttons at the Bottom */}
       <View style={styles.bottomButtonsContainer}>
-        {/* {(order.status === 'New' || order.status === 'Pending') && (
-          <View style={styles.rowButtons}>
-            <TouchableOpacity
-              style={styles.acceptBtn}
-              onPress={handleAccept}
-              activeOpacity={0.8}
-              disabled={!!updatingAction}
-            >
-              {updatingAction === 'accept' ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <AppText style={styles.acceptBtnText}>Accept</AppText>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.rejectBtn}
-              onPress={handleReject}
-              activeOpacity={0.8}
-              disabled={!!updatingAction}
-            >
-              {updatingAction === 'reject' ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <AppText style={styles.rejectBtnText}>Reject</AppText>
-              )}
-            </TouchableOpacity>
-          </View>
-        )} */}
+        {(order.status === 'New' ||
+          order.status === 'Pending' ||
+          order.status?.toLowerCase() === 'pending') && (
+          <TouchableOpacity
+            style={styles.fullWidthBtn}
+            onPress={handleProcess}
+            activeOpacity={0.8}
+            disabled={!!updatingAction}
+          >
+            {updatingAction === 'processing' ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <>
+                <AppText style={styles.fullWidthBtnText}>Processing</AppText>
+                <Feather
+                  name="arrow-right"
+                  size={20}
+                  color="#000000"
+                  style={styles.arrowIcon}
+                />
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         {order.status === 'Processing' && (
           <TouchableOpacity

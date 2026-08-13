@@ -5,31 +5,110 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import AppText from '../../components/AppText';
-import { useSelector } from 'react-redux';
-import { selectOrders } from '../../store/orderSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import VendorHeader from '../../components/VendorHeader';
+import { useGetUserOrdersQuery } from '../../Services/UserServices';
 
 const UserOrders = ({ navigation }) => {
-  const orders = useSelector(selectOrders);
   const [activeTab, setActiveTab] = useState('New');
-
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const tabs = ['New', 'Processing', 'Shipped', 'Delivered'];
 
-  const getFilteredOrders = () => {
-    return orders.filter(order => {
-      const status = order.status.toLowerCase();
-      if (activeTab === 'New') {
-        return status === 'new' || status === 'pending';
-      }
-      return status === activeTab.toLowerCase();
-    });
+  const statusParam = activeTab === 'New' ? 'pending' : activeTab.toLowerCase();
+  const {
+    data: ordersData,
+    isFetching,
+    refetch,
+  } = useGetUserOrdersQuery({
+    status: statusParam,
+  });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
   };
 
-  const filteredOrders = getFilteredOrders();
+  const formatOrderTime = dateStr => {
+    if (!dateStr) return 'Recently';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return 'Recently';
+    }
+  };
+
+  const resolveProductImage = rawImage => {
+    if (!rawImage) {
+      return 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop&q=80';
+    }
+
+    let imageUrlStr = '';
+    if (Array.isArray(rawImage)) {
+      imageUrlStr = rawImage[0] || '';
+    } else if (typeof rawImage === 'string') {
+      imageUrlStr = rawImage;
+    }
+
+    imageUrlStr = imageUrlStr.trim();
+    if (imageUrlStr.startsWith('[') && imageUrlStr.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(imageUrlStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          imageUrlStr = parsed[0];
+        }
+      } catch (e) {}
+    }
+
+    if (!imageUrlStr || typeof imageUrlStr !== 'string') {
+      return 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop&q=80';
+    }
+
+    return imageUrlStr;
+  };
+
+  const mapApiOrder = apiOrder => {
+    console.log('apiOrder:-', apiOrder);
+    const items = apiOrder.items || [];
+    const firstItem = items[0] || {};
+    const rawImage = firstItem?.product?.image_url;
+    const itemImage = resolveProductImage(rawImage);
+
+    const itemsCount = items.length;
+    const itemsInfoStr = `${itemsCount} Item${
+      itemsCount > 1 ? 's' : ''
+    } - ${items.map(it => it.name).join(', ')}`;
+
+    const vendorFullName = apiOrder.vendor?.user
+      ? `${apiOrder.vendor.user.name} ${
+          apiOrder.vendor.user.last_name || ''
+        }`.trim()
+      : 'Bespoke Vendor';
+
+    return {
+      ...apiOrder,
+      id: `ord-${apiOrder.id}`,
+      image: itemImage,
+      vendorName: vendorFullName,
+      customerName: vendorFullName,
+      itemsInfo: itemsInfoStr,
+      price: apiOrder.total || apiOrder.subtotal || '0.00',
+      productName: items.map(it => it.name).join(', ') || 'Bespoke Order',
+      time: formatOrderTime(apiOrder.created_at),
+    };
+  };
+
+  const rawOrders = ordersData?.data?.orders || [];
+  const filteredOrders = rawOrders.map(mapApiOrder);
 
   const getBadgeColors = status => {
     const s = status.toLowerCase();
@@ -82,8 +161,20 @@ const UserOrders = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#DBA83A']}
+            tintColor="#DBA83A"
+          />
+        }
       >
-        {filteredOrders.length === 0 ? (
+        {isFetching && filteredOrders.length === 0 ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#DBA83A" />
+          </View>
+        ) : filteredOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <AppText style={styles.emptyText}>
               No orders in {activeTab}.
@@ -112,10 +203,10 @@ const UserOrders = ({ navigation }) => {
                       <AppText style={styles.orderTitle}>
                         Order #{displayOrderId}
                       </AppText>
-                      <AppText style={styles.customerName}>
-                        {item.customerName}
+                      <AppText style={styles.vendorName}>
+                        {item.vendorName}
                       </AppText>
-                      <AppText style={styles.itemsCount}>
+                      <AppText style={styles.itemsCount} numberOfLines={1}>
                         {item.itemsInfo}
                       </AppText>
                     </View>
@@ -237,7 +328,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
   },
-  customerName: {
+  vendorName: {
     fontSize: 12,
     color: '#5D5D5D',
     marginTop: 4,
@@ -252,13 +343,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 6,
   },
   statusBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
+    textTransform: 'capitalize',
   },
   timeAgo: {
     fontSize: 11,
@@ -277,6 +369,11 @@ const styles = StyleSheet.create({
   rowDivider: {
     height: 1,
     backgroundColor: '#F3F4F6',
+  },
+  loaderContainer: {
+    paddingVertical: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

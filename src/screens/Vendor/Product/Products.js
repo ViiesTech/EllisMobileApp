@@ -32,18 +32,30 @@ const Products = ({ navigation }) => {
   const reduxProducts = useSelector(selectProducts);
 
   const getProductImage = prod => {
-    let imgSource = null;
+    const resolveSingleImage = value => {
+      if (!value) return null;
+      if (Array.isArray(value) && value.length > 0) {
+        const first = value[0];
+        return typeof first === 'string' ? first : first?.uri || null;
+      }
+      if (typeof value === 'string' && value.trim() !== '') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0];
+          }
+        } catch (e) {
+          // Not a JSON array
+        }
+        return value;
+      }
+      return null;
+    };
 
-    if (Array.isArray(prod?.image) && prod.image.length > 0) {
-      imgSource = prod.image[0];
-    } else if (typeof prod?.image === 'string' && prod.image.trim() !== '') {
-      imgSource = prod.image;
-    } else if (Array.isArray(prod?.images) && prod.images.length > 0) {
-      const first = prod.images[0];
-      imgSource = typeof first === 'string' ? first : first?.uri;
-    } else if (typeof prod?.images === 'string' && prod.images.trim() !== '') {
-      imgSource = prod.images;
-    }
+    const imgSource =
+      resolveSingleImage(prod?.image_url) ||
+      resolveSingleImage(prod?.image) ||
+      resolveSingleImage(prod?.images);
 
     if (!imgSource) {
       return 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80';
@@ -84,6 +96,8 @@ const Products = ({ navigation }) => {
       setPage(prev => prev + 1);
     }
   };
+
+  console.log('apiResponse:-', apiResponse);
 
   return (
     <View style={styles.safeArea}>

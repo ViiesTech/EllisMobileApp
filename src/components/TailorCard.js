@@ -2,161 +2,139 @@ import React from 'react';
 import { View, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Colors from '../config/Colors';
 import AppText from './AppText';
+import Feather from 'react-native-vector-icons/Feather';
 
 export const TailorCard = ({ tailor, onBookNow, onPress }) => {
+  const formatExperience = (exp) => {
+    if (!exp && exp !== 0) return 'Experience 08 Years';
+    const years = exp.toString().replace(/[^0-9]/g, '');
+    return `Experience ${years || '08'} Years`;
+  };
+
+  const locationText = tailor.address || tailor.city || tailor.location || 'California, United states';
+  const displayName =
+    tailor.name && tailor.last_name
+      ? `${tailor.name} ${tailor.last_name}`
+      : tailor.tailorName || tailor.name || 'Andrew Ainsley';
+  const imageUrl = tailor.profile_image_url || tailor.image;
+
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={() => onPress && onPress(tailor)}
       activeOpacity={0.9}
     >
-      <Image source={{ uri: tailor.image }} style={styles.image} />
-      <View style={styles.content}>
-        <View style={styles.headerRow}>
-          <AppText style={styles.name} numberOfLines={1}>
-            {tailor.name}
-          </AppText>
-          <View style={styles.ratingBadge}>
-            <AppText style={styles.star}>★</AppText>
-            <AppText style={styles.ratingText}>{tailor.rating}</AppText>
-          </View>
-        </View>
+      <View style={styles.avatarContainer}>
+        <Image
+          source={{
+            uri:
+              imageUrl ||
+              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+          }}
+          style={styles.avatar}
+        />
+      </View>
 
-        <AppText style={styles.tailorSub}>
-          {tailor.tailorName} • {tailor.experience}
+      <View style={styles.infoCol}>
+        <AppText style={styles.name} numberOfLines={1}>
+          {displayName}
         </AppText>
-
-        <View style={styles.chipsRow}>
-          {tailor.specialties?.map((spec, i) => (
-            <View key={i} style={styles.chip}>
-              <AppText style={styles.chipText}>{spec}</AppText>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.footer}>
-          <View>
-            <AppText style={styles.priceLabel}>Starting from</AppText>
-            <AppText style={styles.price}>${tailor.priceStarting}</AppText>
-          </View>
-
-          <TouchableOpacity
-            style={styles.bookBtn}
-            onPress={() => onBookNow && onBookNow(tailor)}
-          >
-            <AppText style={styles.bookBtnText}>Book Appointment</AppText>
-          </TouchableOpacity>
+        <AppText style={styles.experience}>
+          {formatExperience(tailor.experience)}
+        </AppText>
+        <View style={styles.locationRow}>
+          <Feather name="map-pin" size={11} color={Colors.secondary} style={styles.pinIcon} />
+          <AppText style={styles.location} numberOfLines={1}>
+            {locationText}
+          </AppText>
         </View>
       </View>
+
+      <TouchableOpacity
+        style={styles.detailsBtn}
+        onPress={() => onBookNow && onBookNow(tailor)}
+        activeOpacity={0.8}
+      >
+        <AppText style={styles.detailsBtnText}>View Details</AppText>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#DBA83A', // Brand Mustard Gold
     borderRadius: 14,
     marginBottom: 16,
     flexDirection: 'row',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.graybordercolor,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  image: {
-    width: 90,
-    height: 110,
-    borderRadius: 10,
-    backgroundColor: Colors.textinputboxcolor,
-  },
-  content: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'space-between',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 18,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  avatarContainer: {
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  avatar: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
+  },
+  infoCol: {
+    flex: 1,
+    marginLeft: 14,
+    justifyContent: 'center',
+    marginRight: 8,
   },
   name: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: Colors.secondary,
-    flex: 1,
+    color: '#000000',
   },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.pendingBG,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#FFE0B2',
-  },
-  star: {
-    fontSize: 11,
-    color: Colors.pending,
-    marginRight: 2,
-  },
-  ratingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.pending,
-  },
-  tailorSub: {
+  experience: {
     fontSize: 12,
-    color: Colors.lightblack,
-    marginTop: 2,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 6,
-  },
-  chip: {
-    backgroundColor: Colors.textinputboxcolor,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 4,
-    marginBottom: 4,
-  },
-  chipText: {
-    fontSize: 10,
-    color: Colors.black,
+    color: '#000000',
+    marginTop: 3,
     fontWeight: '500',
   },
-  footer: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginTop: 6,
   },
-  priceLabel: {
-    fontSize: 10,
-    color: Colors.lightblack,
+  pinIcon: {
+    marginRight: 4,
+    marginTop: 1,
   },
-  price: {
-    fontSize: 14,
+  location: {
+    fontSize: 11,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  detailsBtn: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 95,
+  },
+  detailsBtnText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  bookBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  bookBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.white,
+    color: '#FFFFFF',
   },
 });
 

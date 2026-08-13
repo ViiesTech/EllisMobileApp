@@ -16,4 +16,12 @@ export const Endpoints = {
   getTailorCategories: `tailors/service/categories`,
   getVendorCategories: `vendor/product/categories`,
   getTailorServices: `tailor/services`,
+  tailors: `tailors`,
+  userCategories: `user/products/category`,
+  placeOrder: `user/checkout/place-order`,
+  getUserOrders: `product/getOrders`,
+  userUpdateProfile: `users/update`,
+  checkoutTailorService: `user/tailor-service/measurements`,
+  tailorOrders: `tailor/orders`,
+  userProducts: `user/vendor/products`,
 };

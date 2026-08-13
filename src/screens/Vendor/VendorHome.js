@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
@@ -24,7 +25,7 @@ const VendorHome = ({ navigation }) => {
   const { data: dashboardResponse } = useGetVendorDashboardQuery();
   const dashboardData = dashboardResponse?.data;
 
-  const { data: ordersResponse } = useGetVendorOrdersQuery({});
+  const { data: ordersResponse, isFetching } = useGetVendorOrdersQuery({});
   const apiOrders = ordersResponse?.data || [];
 
   const formatTime = createdAt => {
@@ -210,73 +211,85 @@ const VendorHome = ({ navigation }) => {
 
         {/* Recent Orders List Card */}
         <View style={styles.ordersBox}>
-          {orders.slice(0, 5).map((ord, idx) => {
-            const formattedId = ord.id.startsWith('ord-')
-              ? ord.id.replace('ord-', '#')
-              : `#${ord.id}`;
-            const displayCount = orders.slice(0, 5).length;
-            const badgeColors = getStatusBadge(ord.status);
-            return (
-              <TouchableOpacity
-                key={ord.id}
-                style={[
-                  styles.orderItemRow,
-                  idx < displayCount - 1 && styles.itemDivider,
-                ]}
-                onPress={() =>
-                  navigation.navigate('VendorOrderDetails', { order: ord })
-                }
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={{
-                    uri:
-                      ord.image ||
-                      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
-                  }}
-                  style={styles.orderImg}
-                />
+          {isFetching ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color="#DBA83A" />
+            </View>
+          ) : orders.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <AppText style={styles.emptyText}>No recent orders</AppText>
+            </View>
+          ) : (
+            orders.slice(0, 5).map((ord, idx) => {
+              const formattedId = ord.id.startsWith('ord-')
+                ? ord.id.replace('ord-', '#')
+                : `#${ord.id}`;
+              const displayCount = orders.slice(0, 5).length;
+              const badgeColors = getStatusBadge(ord.status);
+              return (
+                <TouchableOpacity
+                  key={ord.id}
+                  style={[
+                    styles.orderItemRow,
+                    idx < displayCount - 1 && styles.itemDivider,
+                  ]}
+                  onPress={() =>
+                    navigation.navigate('VendorOrderDetails', { order: ord })
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={{
+                      uri:
+                        ord.image ||
+                        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
+                    }}
+                    style={styles.orderImg}
+                  />
 
-                <View style={styles.orderMidInfo}>
-                  <AppText style={styles.orderNum}>Order {formattedId}</AppText>
-                  <AppText style={styles.customerName}>
-                    {ord.customerName}
-                  </AppText>
-                  <AppText style={styles.itemsSub}>
-                    {ord.itemsInfo || `1 Item - $${ord.price}`}
-                  </AppText>
-                </View>
-
-                <View style={styles.orderRightCol}>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: badgeColors.bg,
-                        borderColor: badgeColors.border,
-                      },
-                    ]}
-                  >
-                    <AppText
-                      style={[
-                        styles.statusBadgeText,
-                        { color: badgeColors.text },
-                      ]}
-                    >
-                      {ord.status}
+                  <View style={styles.orderMidInfo}>
+                    <AppText style={styles.orderNum}>
+                      Order {formattedId}
+                    </AppText>
+                    <AppText style={styles.customerName}>
+                      {ord.customerName}
+                    </AppText>
+                    <AppText style={styles.itemsSub}>
+                      {ord.itemsInfo || `1 Item - $${ord.price}`}
                     </AppText>
                   </View>
-                  <AppText style={styles.timeText}>
-                    {ord.time || '1 hour ago'}
-                  </AppText>
 
-                  <View style={styles.arrowCircle}>
-                    <Feather name="chevron-right" size={16} color="#FFFFFF" />
+                  <View style={styles.orderRightCol}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: badgeColors.bg,
+                          borderColor: badgeColors.border,
+                        },
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.statusBadgeText,
+                          { color: badgeColors.text },
+                        ]}
+                      >
+                        {ord.status}
+                      </AppText>
+                    </View>
+                    <AppText style={styles.timeText}>
+                      {ord.time || '1 hour ago'}
+                    </AppText>
+
+                    <View style={styles.arrowCircle}>
+                      <Feather name="chevron-right" size={16} color="#FFFFFF" />
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
       </ScrollView>
     </View>
@@ -433,6 +446,20 @@ const styles = StyleSheet.create({
   },
   btnContainer: {
     marginTop: 4,
+  },
+  loaderContainer: {
+    paddingVertical: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#7C7C7C',
   },
 });
 

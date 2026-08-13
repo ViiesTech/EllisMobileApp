@@ -1,23 +1,120 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
-import { useSelector } from 'react-redux';
-import { selectBookings } from '../../store/bookingSlice';
+import { useGetTailorBookingsQuery } from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
 
+const mapApiBookingToUi = b => {
+  const mapStatus = status => {
+    if (!status) return 'Pending';
+    const s = status.toLowerCase();
+    if (s === 'pending') return 'Pending';
+    if (s === 'accepted') return 'Accepted';
+    if (s === 'in_progress' || s === 'in-progress') return 'In Progress';
+    if (s === 'delivered') return 'Delivered';
+    if (s === 'completed') return 'Completed';
+    if (s === 'rejected') return 'Rejected';
+    return status;
+  };
+
+  const constructMeasurementDetails = item => {
+    return (
+      `Suit Type: ${item.suit_type || '2 Piece'}\n` +
+      `Fit Type: ${item.fit_type || 'Slim'}\n` +
+      `Coat Measurements: Length: ${item.coat_length || 0} in, Shoulder: ${
+        item.shoulder_width || 0
+      } in, Chest: ${item.chest_round || 0} in, Waist: ${
+        item.coat_waist || 0
+      } in, Hip: ${item.coat_hip || 0} in, Sleeve: ${
+        item.sleeves_length || 0
+      } in\n` +
+      `Pant Measurements: Waist: ${item.pant_waist || 0} in, Hip: ${
+        item.pant_hip || 0
+      } in, Length: ${item.pant_length || 0} in, Rise: ${
+        item.rise || 'Regular'
+      }, Leg: ${item.leg || 'Straight'}`
+    );
+  };
+
+  return {
+    id: b.id,
+    customerName:
+      [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Customer',
+    phone: b.phone,
+    address:
+      `${b.address || ''}, ${b.city || ''}, ${b.country || ''}`.replace(
+        /^,\s*|,\s*$/g,
+        '',
+      ) || 'Springfield, United States',
+    shippingAddress: `${b.first_name || ''} ${b.last_name || ''}\n${
+      b.billing_address || b.address || ''
+    }, ${b.billing_city || b.city || ''} ${
+      b.billing_postal_code || b.postal_code || ''
+    }\nPhone: ${b.phone || ''}`,
+    serviceName:
+      b.service_name || (b.service ? b.service.name : 'Custom Fitting'),
+    price: b.total || b.service_price || '0.00',
+    time: b.created_at
+      ? new Date(b.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '12:00 PM',
+    status: mapStatus(b.status),
+    measurementDetails: constructMeasurementDetails(b),
+    // Extra fields
+    suitType: b.suit_type,
+    fitType: b.fit_type,
+    coatLength: b.coat_length,
+    shoulderWidth: b.shoulder_width,
+    chestRound: b.chest_round,
+    coatWaist: b.coat_waist,
+    coatHip: b.coat_hip,
+    sleeveLength: b.sleeves_length,
+    pantWaist: b.pant_waist,
+    pantHip: b.pant_hip,
+    trouserLength: b.pant_length,
+    rise: b.rise,
+    leg: b.leg,
+  };
+};
+
 const TailorBookings = ({ navigation }) => {
-  const bookings = useSelector(selectBookings);
   const [filter, setFilter] = useState('New');
 
-  const filtered = bookings.filter((b) => {
-    if (filter === 'New') return b.status === 'Pending';
-    if (filter === 'Accepted') return b.status === 'Accepted';
-    if (filter === 'In Progress') return b.status === 'In Progress';
-    if (filter === 'Delivered') return b.status === 'Delivered' || b.status === 'Completed';
-    return true;
+  const getBackendStatus = uiFilter => {
+    switch (uiFilter) {
+      case 'New':
+        return 'pending';
+      case 'Accepted':
+        return 'accepted';
+      case 'In Progress':
+        return 'in_progress';
+      case 'Delivered':
+        return 'delivered';
+      default:
+        return 'pending';
+    }
+  };
+
+  const { data, isLoading, refetch, isFetching } = useGetTailorBookingsQuery({
+    page: 1,
+    per_page: 100,
+    status: getBackendStatus(filter),
   });
+
+  const bookingsData = data?.data || [];
+  const filtered = bookingsData.map(mapApiBookingToUi);
 
   return (
     <View style={styles.safeArea}>
@@ -28,7 +125,7 @@ const TailorBookings = ({ navigation }) => {
         homeHeader={false}
         notification={false}
       />
-      
+
       {/* Redesigned Filter Chips */}
       <View style={styles.filterContainer}>
         <ScrollView
@@ -36,14 +133,16 @@ const TailorBookings = ({ navigation }) => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {['New', 'Accepted', 'In Progress', 'Delivered'].map((f) => {
+          {['New', 'Accepted', 'In Progress', 'Delivered'].map(f => {
             const isActive = filter === f;
             return (
               <TouchableOpacity
                 key={f}
                 style={[
                   styles.filterChip,
-                  isActive ? styles.filterChipActive : styles.filterChipInactive,
+                  isActive
+                    ? styles.filterChipActive
+                    : styles.filterChipInactive,
                 ]}
                 onPress={() => setFilter(f)}
                 activeOpacity={0.8}
@@ -58,10 +157,21 @@ const TailorBookings = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching && !isLoading}
+            onRefresh={refetch}
+            colors={[Colors.primary]}
+          />
+        }
       >
         {/* Bookings Card List */}
         <View style={styles.listContainer}>
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : filtered.length === 0 ? (
             <View style={styles.emptyContainer}>
               <AppText style={styles.emptyText}>No bookings found.</AppText>
             </View>
@@ -85,21 +195,25 @@ const TailorBookings = ({ navigation }) => {
                       typeof b.image === 'string'
                         ? { uri: b.image }
                         : b.image || {
-                            uri:
-                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                            uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
                           }
                     }
                     style={styles.clientAvatar}
                   />
 
                   <View style={styles.bookingMidInfo}>
-                    <AppText style={styles.clientName}>{b.customerName}</AppText>
+                    <AppText style={styles.clientName}>
+                      {b.customerName}
+                    </AppText>
                     <AppText style={styles.serviceText}>
                       Service: {b.serviceName}
                     </AppText>
                     <View style={styles.locationContainer}>
                       <Feather name="map-pin" size={10} color="#7C7C7C" />
-                      <AppText style={styles.locationText}> {b.address}</AppText>
+                      <AppText style={styles.locationText}>
+                        {' '}
+                        {b.address}
+                      </AppText>
                     </View>
                   </View>
 
@@ -110,7 +224,8 @@ const TailorBookings = ({ navigation }) => {
                         b.status === 'Pending' && styles.badgeNew,
                         b.status === 'Accepted' && styles.badgeAccepted,
                         b.status === 'In Progress' && styles.badgeProgress,
-                        (b.status === 'Delivered' || b.status === 'Completed') &&
+                        (b.status === 'Delivered' ||
+                          b.status === 'Completed') &&
                           styles.badgeDelivered,
                       ]}
                     >

@@ -13,23 +13,24 @@ import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
 import VendorHeader from '../../components/VendorHeader';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUser, setUserProfile } from '../../store/authSlice';
+import { selectUser, setUser } from '../../store/authSlice';
 import { showToast } from '../../components/Toast';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useUserUpdateProfileMutation } from '../../Services/UserServices';
 
 const UserEditProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
 
-  const nameParts = (userProfile.name || '').trim().split(/\s+/);
-  const initialFirstName = nameParts[0] || 'Alex';
-  const initialLastName = nameParts.slice(1).join(' ') || 'Charlie';
+  const [firstName, setFirstName] = useState(userProfile.name);
+  const [lastName, setLastName] = useState(userProfile.last_name);
+  const [email] = useState(userProfile.email);
+  const [imageUri, setImageUri] = useState(userProfile.user_profile_image);
+  const [imageFile, setImageFile] = useState(null);
 
-  const [firstName, setFirstName] = useState(initialFirstName);
-  const [lastName, setLastName] = useState(initialLastName);
-  const [email] = useState(userProfile.email || 'alexcharlie878@gmail.com');
-  const [imageUri, setImageUri] = useState(userProfile.avatar || '');
+  const [userUpdateProfileMutation, { isLoading: isUpdating }] =
+    useUserUpdateProfileMutation();
 
   const handlePickImage = () => {
     launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
@@ -39,33 +40,63 @@ const UserEditProfile = ({ navigation }) => {
         return;
       }
       if (response.assets && response.assets.length > 0) {
-        setImageUri(response.assets[0].uri);
+        const asset = response.assets[0];
+        setImageUri(asset.uri);
+        setImageFile({
+          uri: asset.uri,
+          name: asset.fileName || 'profile.jpg',
+          type: asset.type || 'image/jpeg',
+        });
       }
     });
   };
 
-  const handleSave = () => {
-    if (!firstName.trim()) {
+  const handleSave = async () => {
+    if (!firstName?.trim()) {
       showToast('Validation Error', 'First name cannot be empty.', 'error');
       return;
     }
-    if (!lastName.trim()) {
+    if (!lastName?.trim()) {
       showToast('Validation Error', 'Last name cannot be empty.', 'error');
       return;
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    dispatch(
-      setUserProfile({
-        ...userProfile,
-        name: fullName,
-        email: email.trim(),
-        avatar: imageUri,
-      }),
-    );
+    try {
+      const formData = new FormData();
+      formData.append('name', firstName.trim());
+      formData.append('last_name', lastName.trim());
+      if (imageFile) {
+        formData.append('user_profile_image', imageFile);
+      }
 
-    showToast('Success', 'Profile changes saved successfully.', 'success');
-    navigation.goBack();
+      const response = await userUpdateProfileMutation({
+        id: userProfile.id,
+        body: formData,
+      }).unwrap();
+
+      if (response?.success) {
+        dispatch(setUser(response.data));
+        showToast(
+          'Success',
+          response?.message || 'Profile updated successfully.',
+          'success',
+        );
+        navigation.goBack();
+      } else {
+        showToast(
+          'Error',
+          response?.message || 'Failed to update profile.',
+          'error',
+        );
+      }
+    } catch (err) {
+      console.log('Error updating profile:', err);
+      showToast(
+        'Error',
+        err?.data?.message || err?.message || 'Network error occurred.',
+        'error',
+      );
+    }
   };
 
   return (
@@ -133,6 +164,7 @@ const UserEditProfile = ({ navigation }) => {
           <CustomButton
             title="Save Changes"
             onPress={handleSave}
+            loading={isUpdating}
             hasArrow={true}
           />
         </View>

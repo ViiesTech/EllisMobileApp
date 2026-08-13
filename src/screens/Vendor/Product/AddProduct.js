@@ -82,18 +82,22 @@ const AddProduct = ({ route, navigation }) => {
 
   const getInitialImages = () => {
     if (!editingProduct) return [];
-    if (Array.isArray(editingProduct.images)) return editingProduct.images;
-    if (
-      typeof editingProduct.images === 'string' &&
-      editingProduct.images.trim() !== ''
-    )
-      return [editingProduct.images];
-    if (Array.isArray(editingProduct.images)) return editingProduct.images;
-    if (
-      typeof editingProduct.images === 'string' &&
-      editingProduct.images.trim() !== ''
-    )
-      return [editingProduct.images];
+    const imgUrl =
+      editingProduct.image_url || editingProduct.image || editingProduct.images;
+    if (!imgUrl) return [];
+
+    if (Array.isArray(imgUrl)) {
+      return imgUrl;
+    }
+    if (typeof imgUrl === 'string' && imgUrl.trim() !== '') {
+      try {
+        const parsed = JSON.parse(imgUrl);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        // Not a JSON string
+      }
+      return [imgUrl];
+    }
     return [];
   };
 

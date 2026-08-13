@@ -92,6 +92,11 @@ export const baseApi = createApi({
     'VendorCategories',
     'TailorCategories',
     'TailorServices',
+    'Tailors',
+    'UserCategories',
+    'Users',
+    'TailorBookings',
+    'UserProducts',
   ],
   endpoints: () => ({}),
 });
