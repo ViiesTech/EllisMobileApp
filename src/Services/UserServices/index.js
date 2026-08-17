@@ -56,6 +56,14 @@ const getUserOrders = params => {
   };
 };
 
+const getUserBookings = params => {
+  return {
+    url: Endpoints.getUserBookings,
+    method: apiMethods.get,
+    params,
+  };
+};
+
 const userUpdateProfile = ({ id, body }) => {
   return {
     url: `${Endpoints.userUpdateProfile}/${id}`,
@@ -98,6 +106,10 @@ export const UserServices = baseApi.injectEndpoints({
       query: userProducts,
       providesTags: ['UserProducts'],
     }),
+    getUserBookings: build.query({
+      query: getUserBookings,
+      providesTags: ['UserBookings'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -114,4 +126,6 @@ export const {
   useUserUpdateProfileMutation,
   useUserProductsQuery,
   useLazyUserProductsQuery,
+  useGetUserBookingsQuery,
+  useLazyGetUserBookingsQuery,
 } = UserServices;

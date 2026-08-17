@@ -77,10 +77,9 @@ const UserOrders = ({ navigation }) => {
   };
 
   const mapApiOrder = apiOrder => {
-    console.log('apiOrder:-', apiOrder);
     const items = apiOrder.items || [];
     const firstItem = items[0] || {};
-    const rawImage = firstItem?.product?.image_url;
+    const rawImage = firstItem?.product?.images;
     const itemImage = resolveProductImage(rawImage);
 
     const itemsCount = items.length;

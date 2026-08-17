@@ -82,7 +82,7 @@ const UserBookingDetails = ({ route, navigation }) => {
           <Image
             source={{
               uri:
-                booking.styleImage ||
+                booking.serviceImage ||
                 'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=300&auto=format&fit=crop&q=80',
             }}
             style={styles.styleImage}

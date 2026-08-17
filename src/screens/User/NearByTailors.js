@@ -68,7 +68,7 @@ const NearByTailors = ({ navigation }) => {
   };
 
   const onLoadMore = () => {
-    if (!loadingMore && !isFetching && hasMore) {
+    if (!loadingMore && !isFetching && hasMore && tailorsList.length > 0) {
       fetchTailorsList(page + 1, false);
     }
   };

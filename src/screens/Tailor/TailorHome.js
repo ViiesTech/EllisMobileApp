@@ -14,10 +14,13 @@ import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../store/authSlice';
+import ApiConstants from '../../Constants/Api.constants';
 import {
   useGetTailorBookingsQuery,
   useGetTailorDashboardQuery,
 } from '../../Services/TailorServices';
+import { resolveImage } from '../../utils';
+import moment from 'moment';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = (screenWidth - 40 - 36) / 4; // 40 for screen padding, 36 for 3 gaps of 12
@@ -56,8 +59,7 @@ const mapApiBookingToUi = b => {
 
   return {
     id: b.id,
-    customerName:
-      [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Customer',
+    customerName: `${b.user?.name} ${b.user?.last_name}` || 'Customer',
     phone: b.phone,
     address:
       `${b.address || ''}, ${b.city || ''}, ${b.country || ''}`.replace(
@@ -69,35 +71,32 @@ const mapApiBookingToUi = b => {
     }, ${b.billing_city || b.city || ''} ${
       b.billing_postal_code || b.postal_code || ''
     }\nPhone: ${b.phone || ''}`,
-    serviceName:
-      b.service_name || (b.service ? b.service.name : 'Custom Fitting'),
+    image: resolveImage(b.user?.user_profile_image),
+    serviceName: b.service?.name,
+    serviceDescription: b.service?.description,
+    serviceImage: b.service?.image_url,
     price: b.total || b.service_price || '0.00',
-    time: b.created_at
-      ? new Date(b.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '12:00 PM',
+    time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
     status: mapStatus(b.status),
-    measurementDetails: constructMeasurementDetails(b),
+    measurementDetails: constructMeasurementDetails(b?.measurement),
     // Extra fields
-    suitType: b.suit_type,
-    fitType: b.fit_type,
-    coatLength: b.coat_length,
-    shoulderWidth: b.shoulder_width,
-    chestRound: b.chest_round,
-    coatWaist: b.coat_waist,
-    coatHip: b.coat_hip,
-    sleeveLength: b.sleeves_length,
-    pantWaist: b.pant_waist,
-    pantHip: b.pant_hip,
-    trouserLength: b.pant_length,
-    rise: b.rise,
-    leg: b.leg,
+    suitType: b?.measurement?.suit_type,
+    fitType: b?.measurement?.fit_type,
+    coatLength: b?.measurement?.coat_length,
+    shoulderWidth: b?.measurement?.shoulder_width,
+    chestRound: b?.measurement?.chest_round,
+    coatWaist: b?.measurement?.coat_waist,
+    coatHip: b?.measurement?.coat_hip,
+    sleeveLength: b?.measurement?.sleeve_length,
+    pantWaist: b?.measurement?.pant_waist,
+    pantHip: b?.measurement?.pant_hip,
+    trouserLength: b?.measurement?.trouser_length,
+    rise: b?.measurement?.rise,
+    leg: b?.measurement?.leg,
   };
 };
 
-const formatRevenue = (rev) => {
+const formatRevenue = rev => {
   const val = Number(rev) || 0;
   if (val >= 1000) {
     return `$${(val / 1000).toFixed(1)}K`;
@@ -119,6 +118,8 @@ const TailorHome = ({ navigation }) => {
 
   const bookingsData = data?.data || [];
   const newBookings = bookingsData.map(mapApiBookingToUi);
+
+  console.log('bookingsData:-', bookingsData);
 
   return (
     <View style={styles.safeArea}>
@@ -158,16 +159,18 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>{stats.pending_bookings ?? 0}</AppText>
+            <AppText style={styles.statVal}>
+              {stats.pending_bookings ?? 0}
+            </AppText>
             <AppText style={styles.statTitle}>New{'\n'}Bookings</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>12%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 2 */}
@@ -176,17 +179,18 @@ const TailorHome = ({ navigation }) => {
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
             <AppText style={styles.statVal}>
-              {(stats.accepted_bookings ?? 0) + (stats.in_progress_bookings ?? 0)}
+              {(stats.accepted_bookings ?? 0) +
+                (stats.in_progress_bookings ?? 0)}
             </AppText>
             <AppText style={styles.statTitle}>Active{'\n'}Bookings</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>16%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 3 */}
@@ -194,16 +198,18 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="file-text" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>{stats.completed_bookings ?? 0}</AppText>
+            <AppText style={styles.statVal}>
+              {stats.completed_bookings ?? 0}
+            </AppText>
             <AppText style={styles.statTitle}>Completed{'\n'}Bookings</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>16%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 4 */}
@@ -211,16 +217,18 @@ const TailorHome = ({ navigation }) => {
             <View style={styles.iconCircle}>
               <Feather name="dollar-sign" size={16} color={Colors.primary} />
             </View>
-            <AppText style={styles.statVal}>{formatRevenue(stats.total_revenue)}</AppText>
+            <AppText style={styles.statVal}>
+              {formatRevenue(stats.total_revenue)}
+            </AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Revenue</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>16%</AppText>
-            </View>
+            </View> */}
           </View>
         </View>
 

@@ -27,6 +27,7 @@ const Home = ({ navigation }) => {
 
   const cartTotalItems = cart.length;
 
+  // console.log('products:-', products);
   return (
     <View style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -101,8 +102,8 @@ const Home = ({ navigation }) => {
         ) : (
           <View style={styles.grid}>
             {products.map(prod => {
-              const price = prod.price_per_meter || prod.price || '0.00';
-              const rawImage = prod.image_url || prod.image;
+              const price = prod.price;
+              const rawImage = prod.images;
               let singleImage = Array.isArray(rawImage)
                 ? rawImage[0]
                 : rawImage;

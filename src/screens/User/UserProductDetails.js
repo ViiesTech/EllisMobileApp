@@ -28,10 +28,10 @@ const UserProductDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const cart = useSelector(selectCart);
   const product = route.params?.product;
-  console.log('product:-', product);
+  // console.log('product:->', product);
 
   const getProductImages = () => {
-    const rawImage = product.image_url || product.image;
+    const rawImage = product.images;
     if (rawImage) {
       if (Array.isArray(rawImage)) {
         return rawImage.length > 0
@@ -72,7 +72,7 @@ const UserProductDetails = ({ route, navigation }) => {
   const cartTotalItems = cart.length;
 
   const handleAddToCart = () => {
-    const rawImage = product.image_url || product.image;
+    const rawImage = product.images;
     let singleImage = Array.isArray(rawImage) ? rawImage[0] : rawImage;
     if (
       typeof singleImage === 'string' &&
@@ -88,7 +88,7 @@ const UserProductDetails = ({ route, navigation }) => {
     }
     const normalizedProduct = {
       ...product,
-      price: product.price_per_meter || product.price || 120,
+      price: product.price,
       image:
         singleImage ||
         'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
@@ -180,8 +180,8 @@ const UserProductDetails = ({ route, navigation }) => {
             {product.category_name || product.category || 'Category'}
           </AppText>
           <AppText style={styles.priceText}>
-            ${product.price_per_meter || product.price || '0.00'}{' '}
-            {product.price_per_meter ? 'Per Meter' : 'Per Unit'}
+            ${product?.price}{' '}
+            {product?.price_per_meter ? 'Per Meter' : 'Per Unit'}
           </AppText>
 
           {/* Colors Selection Row */}

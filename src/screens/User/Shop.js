@@ -182,8 +182,8 @@ const Shop = ({ navigation }) => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          const price = item.price_per_meter || item.price || '0.00';
-          const rawImage = item.image_url || item.image;
+          const price = item.price;
+          const rawImage = item.images;
           let singleImage = Array.isArray(rawImage) ? rawImage[0] : rawImage;
           if (
             typeof singleImage === 'string' &&

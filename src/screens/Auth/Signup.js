@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,6 +14,8 @@ import AppText from '../../components/AppText';
 import { Dropdown } from 'react-native-element-dropdown';
 import { useSignupMutation } from '../../Services/Auth';
 import { showToast, showToastError } from '../../components/Toast';
+import { useSelector } from 'react-redux';
+import { selectRole } from '../../store/authSlice';
 
 const ROLES_DATA = [
   { label: 'User', value: '2' },
@@ -30,6 +32,21 @@ const Signup = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setSelectedRole] = useState('');
   const [errors, setErrors] = useState({});
+  const roleType = useSelector(selectRole);
+  console.log('roleTypee:-', roleType);
+
+  useEffect(() => {
+    if (roleType) {
+      const type = roleType.toUpperCase();
+      if (type === 'USER') {
+        setSelectedRole('2');
+      } else if (type === 'VENDOR') {
+        setSelectedRole('3');
+      } else if (type === 'TAILOR') {
+        setSelectedRole('4');
+      }
+    }
+  }, [roleType]);
 
   const validate = () => {
     let valid = true;

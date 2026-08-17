@@ -89,7 +89,7 @@ const UserOrderDetails = ({ route, navigation }) => {
           ) : (
             <>
               <AppText style={styles.detailLabel}>Delivery Time</AppText>
-              <AppText style={styles.detailValue}>4 to 5 Days</AppText>
+              <AppText style={styles.detailValue}>4 to 5 working days</AppText>
             </>
           )}
         </View>

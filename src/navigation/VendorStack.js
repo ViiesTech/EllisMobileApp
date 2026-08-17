@@ -14,6 +14,7 @@ import AddBankAccount from '../screens/CommonScreens/AddBankAccount';
 import PrivacyPolicy from '../screens/CommonScreens/PrivacyPolicy';
 import TermsAndCoditions from '../screens/CommonScreens/TermsAndCoditions';
 import UnderReview from '../screens/Auth/UnderReview';
+import ChangePassword from '../screens/CommonScreens/ChangePassword';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +37,7 @@ const VendorStack = () => {
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
       <Stack.Screen name="TermsAndCoditions" component={TermsAndCoditions} />
       <Stack.Screen name="UnderReview" component={UnderReview} />
+      <Stack.Screen name="ChangePassword" component={ChangePassword} />
     </Stack.Navigator>
   );
 };

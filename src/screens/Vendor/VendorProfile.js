@@ -57,6 +57,13 @@ const VendorProfile = ({ navigation }) => {
       },
     },
     {
+      id: 'change_password',
+      label: 'Change Password',
+      action: () => {
+        navigation.navigate('ChangePassword');
+      },
+    },
+    {
       id: 'payment_bank',
       label: 'Payment & Bank',
       action: () => {

@@ -13,6 +13,9 @@ import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
 import { useGetTailorBookingsQuery } from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
+import ApiConstants from '../../Constants/Api.constants';
+import { resolveImage } from '../../utils';
+import moment from 'moment';
 
 const mapApiBookingToUi = b => {
   const mapStatus = status => {
@@ -28,6 +31,7 @@ const mapApiBookingToUi = b => {
   };
 
   const constructMeasurementDetails = item => {
+    console.log('item:-', item);
     return (
       `Suit Type: ${item.suit_type || '2 Piece'}\n` +
       `Fit Type: ${item.fit_type || 'Slim'}\n` +
@@ -48,8 +52,7 @@ const mapApiBookingToUi = b => {
 
   return {
     id: b.id,
-    customerName:
-      [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Customer',
+    customerName: `${b.user?.name} ${b.user?.last_name}` || 'Customer',
     phone: b.phone,
     address:
       `${b.address || ''}, ${b.city || ''}, ${b.country || ''}`.replace(
@@ -61,31 +64,28 @@ const mapApiBookingToUi = b => {
     }, ${b.billing_city || b.city || ''} ${
       b.billing_postal_code || b.postal_code || ''
     }\nPhone: ${b.phone || ''}`,
-    serviceName:
-      b.service_name || (b.service ? b.service.name : 'Custom Fitting'),
+    image: resolveImage(b.user?.user_profile_image),
+    serviceName: b.service?.name,
+    serviceDescription: b.service?.description,
+    serviceImage: b.service?.image_url,
     price: b.total || b.service_price || '0.00',
-    time: b.created_at
-      ? new Date(b.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '12:00 PM',
+    time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
     status: mapStatus(b.status),
-    measurementDetails: constructMeasurementDetails(b),
+    measurementDetails: constructMeasurementDetails(b?.measurement),
     // Extra fields
-    suitType: b.suit_type,
-    fitType: b.fit_type,
-    coatLength: b.coat_length,
-    shoulderWidth: b.shoulder_width,
-    chestRound: b.chest_round,
-    coatWaist: b.coat_waist,
-    coatHip: b.coat_hip,
-    sleeveLength: b.sleeves_length,
-    pantWaist: b.pant_waist,
-    pantHip: b.pant_hip,
-    trouserLength: b.pant_length,
-    rise: b.rise,
-    leg: b.leg,
+    suitType: b?.measurement?.suit_type,
+    fitType: b?.measurement?.fit_type,
+    coatLength: b?.measurement?.coat_length,
+    shoulderWidth: b?.measurement?.shoulder_width,
+    chestRound: b?.measurement?.chest_round,
+    coatWaist: b?.measurement?.coat_waist,
+    coatHip: b?.measurement?.coat_hip,
+    sleeveLength: b?.measurement?.sleeve_length,
+    pantWaist: b?.measurement?.pant_waist,
+    pantHip: b?.measurement?.pant_hip,
+    trouserLength: b?.measurement?.trouser_length,
+    rise: b?.measurement?.rise,
+    leg: b?.measurement?.leg,
   };
 };
 
@@ -101,7 +101,7 @@ const TailorBookings = ({ navigation }) => {
       case 'In Progress':
         return 'in_progress';
       case 'Delivered':
-        return 'delivered';
+        return 'completed';
       default:
         return 'pending';
     }

@@ -16,21 +16,22 @@ import Feather from 'react-native-vector-icons/Feather';
 
 const TailorBookingDetails = ({ route, navigation }) => {
   const { booking } = route.params || {};
-  const [updateStatus, { isLoading }] =
-    useUpdateTailorBookingStatusMutation();
+  const [updateStatus, { isLoading }] = useUpdateTailorBookingStatusMutation();
   const [activeAction, setActiveAction] = useState(null);
 
   if (!booking) {
     return (
       <View style={styles.errorContainer}>
-        <AppText style={styles.errorText}>No booking details available.</AppText>
+        <AppText style={styles.errorText}>
+          No booking details available.
+        </AppText>
       </View>
     );
   }
 
   const handleStatusChange = async (status, actionName) => {
     setActiveAction(actionName);
-    const mapUiStatusToBackend = (s) => {
+    const mapUiStatusToBackend = s => {
       if (s === 'Pending') return 'pending';
       if (s === 'Accepted') return 'accepted';
       if (s === 'In Progress') return 'in_progress';
@@ -59,6 +60,7 @@ const TailorBookingDetails = ({ route, navigation }) => {
     }
   };
 
+  console.log('booking', booking);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -80,8 +82,7 @@ const TailorBookingDetails = ({ route, navigation }) => {
               typeof booking.image === 'string'
                 ? { uri: booking.image }
                 : booking.image || {
-                    uri:
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
                   }
             }
             style={styles.clientAvatar}
@@ -90,7 +91,10 @@ const TailorBookingDetails = ({ route, navigation }) => {
             <AppText style={styles.clientName}>{booking.customerName}</AppText>
             <View style={styles.locationContainer}>
               <Feather name="map-pin" size={12} color="#7C7C7C" />
-              <AppText style={styles.locationText}> {booking.address || 'Chicago, United States'}</AppText>
+              <AppText style={styles.locationText}>
+                {' '}
+                {booking.address || 'Chicago, United States'}
+              </AppText>
             </View>
           </View>
         </View>
@@ -104,9 +108,9 @@ const TailorBookingDetails = ({ route, navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <AppText style={styles.sectionHeader}>Fabric Details</AppText>
+          <AppText style={styles.sectionHeader}>Service Description</AppText>
           <AppText style={styles.sectionBody}>
-            {booking.fabricDetails ||
+            {booking.serviceDescription ||
               'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.'}
           </AppText>
         </View>
@@ -116,7 +120,7 @@ const TailorBookingDetails = ({ route, navigation }) => {
           <Image
             source={{
               uri:
-                booking.styleImage ||
+                booking.serviceImage ||
                 'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=300&auto=format&fit=crop&q=80',
             }}
             style={styles.styleImage}
@@ -145,7 +149,11 @@ const TailorBookingDetails = ({ route, navigation }) => {
         {booking.status === 'Pending' && (
           <View style={styles.row}>
             <TouchableOpacity
-              style={[styles.btn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+              style={[
+                styles.btn,
+                styles.acceptBtn,
+                isLoading && { opacity: 0.7 },
+              ]}
               onPress={() => handleStatusChange('Accepted', 'accept')}
               activeOpacity={0.8}
               disabled={isLoading}
@@ -157,7 +165,11 @@ const TailorBookingDetails = ({ route, navigation }) => {
               )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.btn, styles.rejectBtn, isLoading && { opacity: 0.7 }]}
+              style={[
+                styles.btn,
+                styles.rejectBtn,
+                isLoading && { opacity: 0.7 },
+              ]}
               onPress={() => handleStatusChange('Cancelled', 'reject')}
               activeOpacity={0.8}
               disabled={isLoading}
@@ -173,7 +185,12 @@ const TailorBookingDetails = ({ route, navigation }) => {
 
         {booking.status === 'Accepted' && (
           <TouchableOpacity
-            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+            style={[
+              styles.btn,
+              styles.fullWidthBtn,
+              styles.acceptBtn,
+              isLoading && { opacity: 0.7 },
+            ]}
             onPress={() => handleStatusChange('In Progress', 'start')}
             activeOpacity={0.8}
             disabled={isLoading}
@@ -188,7 +205,12 @@ const TailorBookingDetails = ({ route, navigation }) => {
 
         {booking.status === 'In Progress' && (
           <TouchableOpacity
-            style={[styles.btn, styles.fullWidthBtn, styles.acceptBtn, isLoading && { opacity: 0.7 }]}
+            style={[
+              styles.btn,
+              styles.fullWidthBtn,
+              styles.acceptBtn,
+              isLoading && { opacity: 0.7 },
+            ]}
             onPress={() => handleStatusChange('Completed', 'deliver')}
             activeOpacity={0.8}
             disabled={isLoading}
@@ -203,13 +225,17 @@ const TailorBookingDetails = ({ route, navigation }) => {
 
         {(booking.status === 'Delivered' || booking.status === 'Completed') && (
           <View style={[styles.btn, styles.fullWidthBtn, styles.disabledBtn]}>
-            <AppText style={styles.disabledBtnText}>Completed & Delivered</AppText>
+            <AppText style={styles.disabledBtnText}>
+              Completed & Delivered
+            </AppText>
           </View>
         )}
 
         {(booking.status === 'Rejected' || booking.status === 'Cancelled') && (
           <View style={[styles.btn, styles.fullWidthBtn, styles.disabledBtn]}>
-            <AppText style={styles.disabledBtnText}>Booking Rejected / Cancelled</AppText>
+            <AppText style={styles.disabledBtnText}>
+              Booking Rejected / Cancelled
+            </AppText>
           </View>
         )}
       </View>

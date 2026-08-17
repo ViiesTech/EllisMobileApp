@@ -115,6 +115,7 @@ const VendorHome = ({ navigation }) => {
     }
   };
 
+  console.log('dashboardResponse:-', dashboardResponse);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -136,14 +137,14 @@ const VendorHome = ({ navigation }) => {
             </View>
             <AppText style={styles.statVal}>{totalOrdersVal}</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Orders</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>12%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 2 */}
@@ -153,14 +154,14 @@ const VendorHome = ({ navigation }) => {
             </View>
             <AppText style={styles.statVal}>{activeProductsVal}</AppText>
             <AppText style={styles.statTitle}>Active{'\n'}Products</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>8%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 3 */}
@@ -170,14 +171,14 @@ const VendorHome = ({ navigation }) => {
             </View>
             <AppText style={styles.statVal}>{pendingOrdersVal}</AppText>
             <AppText style={styles.statTitle}>Pending{'\n'}Orders</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>16%</AppText>
-            </View>
+            </View> */}
           </View>
 
           {/* Card 4 */}
@@ -187,14 +188,14 @@ const VendorHome = ({ navigation }) => {
             </View>
             <AppText style={styles.statVal}>${displayRevenue}</AppText>
             <AppText style={styles.statTitle}>Total{'\n'}Revenue</AppText>
-            <View style={styles.statGrowthBox}>
+            {/* <View style={styles.statGrowthBox}>
               <FontAwesome6
                 name="arrow-up-long"
                 size={8}
                 color={Colors.black}
               />
               <AppText style={styles.statGrowth}>16%</AppText>
-            </View>
+            </View> */}
           </View>
         </View>
 

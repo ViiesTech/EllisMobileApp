@@ -43,10 +43,8 @@ const AddProduct = ({ route, navigation }) => {
 
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
-    editingProduct?.price_per_meter
-      ? String(editingProduct.price_per_meter)
-      : editingProduct?.price
-      ? String(editingProduct.price)
+    editingProduct?.price_per_meter || editingProduct?.price
+      ? String(editingProduct.price_per_meter || editingProduct.price)
       : '',
   );
   const [categoryId, setCategoryId] = useState('');
@@ -151,7 +149,7 @@ const AddProduct = ({ route, navigation }) => {
       formData.append('name', name.trim());
       formData.append('category_id', String(categoryId));
       formData.append('description', description.trim());
-      formData.append('price_per_meter', price.trim());
+      formData.append('price', price.trim());
       formData.append('available_stock', stock.trim());
       formData.append('color', color.trim());
       formData.append('material', material.trim());
@@ -336,7 +334,7 @@ const AddProduct = ({ route, navigation }) => {
           />
 
           <TextField
-            label="Price per Meter"
+            label="Price per Unit"
             value={price}
             onChangeText={setPrice}
             placeholder="$30"

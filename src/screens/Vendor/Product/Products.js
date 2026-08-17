@@ -136,7 +136,7 @@ const Products = ({ navigation }) => {
           ) : null
         }
         renderItem={({ item: prod }) => {
-          const priceVal = prod.price_per_meter || prod.price || '0';
+          const priceVal = prod.price;
           const imgUri = getProductImage(prod);
 
           return (

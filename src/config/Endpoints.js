@@ -24,4 +24,6 @@ export const Endpoints = {
   checkoutTailorService: `user/tailor-service/measurements`,
   tailorOrders: `tailor/orders`,
   userProducts: `user/vendor/products`,
+  getUserBookings: `user/services/orders/get`,
+  changePassword: `auth/change-password`,
 };

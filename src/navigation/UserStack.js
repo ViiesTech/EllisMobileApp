@@ -14,6 +14,7 @@ import UserProductDetails from '../screens/User/UserProductDetails';
 import UserBookingDetails from '../screens/User/Booking/UserBookingDetails';
 import NearByTailors from '../screens/User/NearByTailors';
 import TailorDetails from '../screens/User/TailorDetails';
+import ChangePassword from '../screens/CommonScreens/ChangePassword';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,7 @@ const UserStack = () => {
       <Stack.Screen name="TermsAndCoditions" component={TermsAndCoditions} />
       <Stack.Screen name="UserOrderDetails" component={UserOrderDetails} />
       <Stack.Screen name="UserBookingDetails" component={UserBookingDetails} />
+      <Stack.Screen name="ChangePassword" component={ChangePassword} />
     </Stack.Navigator>
   );
 };

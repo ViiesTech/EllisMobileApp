@@ -46,6 +46,13 @@ const UserProfile = ({ navigation }) => {
       },
     },
     {
+      id: 'change_password',
+      label: 'Change Password',
+      action: () => {
+        navigation.navigate('ChangePassword');
+      },
+    },
+    {
       id: 'help_support',
       label: 'Help & Support',
       action: () =>

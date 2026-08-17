@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import Colors from '../config/Colors';
 import Fonts from '../config/Fonts';
 import AppText from './AppText';
@@ -21,6 +21,8 @@ export const TextField = ({
   containerStyle,
   editable,
 }) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
   return (
     <View style={[styles.container, style]}>
       {label && <AppText style={styles.label}>{label}</AppText>}
@@ -55,12 +57,25 @@ export const TextField = ({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor="#A3A3A3"
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={secureTextEntry && !isPasswordVisible}
           keyboardType={keyboardType}
           multiline={multiline}
           numberOfLines={numberOfLines}
           editable={editable}
         />
+        {secureTextEntry && (
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible(prev => !prev)}
+            style={styles.rightIcon}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name={isPasswordVisible ? 'eye' : 'eye-off'}
+              size={18}
+              color="#8E8E93"
+            />
+          </TouchableOpacity>
+        )}
       </View>
       {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
@@ -90,6 +105,10 @@ const styles = StyleSheet.create({
   },
   leftIcon: {
     marginRight: 10,
+  },
+  rightIcon: {
+    padding: 4,
+    marginLeft: 10,
   },
   input: {
     flex: 1,

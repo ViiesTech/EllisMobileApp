@@ -61,7 +61,7 @@ const ProductDetails = ({ route, navigation }) => {
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const priceVal = product?.price_per_meter || product?.price || '0';
+  const priceVal = product?.price;
   const stockVal =
     product?.available_stock !== undefined
       ? product.available_stock
