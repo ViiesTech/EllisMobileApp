@@ -48,11 +48,26 @@ const checkoutTailorService = body => {
   };
 };
 
+const submitReview = body => {
+  return {
+    url: Endpoints.submitReview,
+    method: apiMethods.post,
+    body,
+  };
+};
+
 const getUserOrders = params => {
   return {
     url: Endpoints.getUserOrders,
     method: apiMethods.get,
     params,
+  };
+};
+
+const getUserOrderDetails = id => {
+  return {
+    url: `${Endpoints.getUserOrders}/${id}`,
+    method: apiMethods.get,
   };
 };
 
@@ -69,6 +84,21 @@ const userUpdateProfile = ({ id, body }) => {
     url: `${Endpoints.userUpdateProfile}/${id}`,
     method: apiMethods.post,
     body,
+  };
+};
+
+const getUserTailorServices = ({ tailorId, params }) => {
+  return {
+    url: `user/tailors/${tailorId}/services`,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const getProductReviews = id => {
+  return {
+    url: `user/products/${id}/reviews`,
+    method: apiMethods.get,
   };
 };
 
@@ -110,6 +140,21 @@ export const UserServices = baseApi.injectEndpoints({
       query: getUserBookings,
       providesTags: ['UserBookings'],
     }),
+    getUserTailorServices: build.query({
+      query: getUserTailorServices,
+      providesTags: ['TailorServices'],
+    }),
+    submitReview: build.mutation({
+      query: submitReview,
+      invalidatesTags: ['VendorOrders'],
+    }),
+    getUserOrderDetails: build.query({
+      query: getUserOrderDetails,
+      providesTags: ['VendorOrders'],
+    }),
+    getProductReviews: build.query({
+      query: getProductReviews,
+    }),
   }),
   overrideExisting: true,
 });
@@ -128,4 +173,9 @@ export const {
   useLazyUserProductsQuery,
   useGetUserBookingsQuery,
   useLazyGetUserBookingsQuery,
+  useGetUserTailorServicesQuery,
+  useLazyGetUserTailorServicesQuery,
+  useSubmitReviewMutation,
+  useGetUserOrderDetailsQuery,
+  useGetProductReviewsQuery,
 } = UserServices;

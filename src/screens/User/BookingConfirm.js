@@ -40,6 +40,10 @@ const BookingConfirm = ({ route, navigation }) => {
 
   const price = service?.price;
   const serviceName = service?.name;
+  const categoryName =
+    typeof service?.category === 'object'
+      ? service?.category?.name
+      : service?.category;
 
   return (
     <View style={styles.container}>
@@ -58,7 +62,7 @@ const BookingConfirm = ({ route, navigation }) => {
           <View style={styles.cardInfo}>
             <AppText style={styles.styleLabel}>STYLE NAME</AppText>
             <AppText style={styles.serviceName}>
-              {service?.name} - {service?.category}
+              {service?.name} {categoryName ? `- ${categoryName}` : ''}
             </AppText>
             <AppText style={styles.priceText}>${price}</AppText>
           </View>
@@ -67,7 +71,7 @@ const BookingConfirm = ({ route, navigation }) => {
         <View style={styles.divider} />
 
         {/* Delivery Info Row */}
-        <View style={styles.infoRow}>
+        {/* <View style={styles.infoRow}>
           <View style={styles.infoLeft}>
             <Feather
               name="truck"
@@ -78,9 +82,9 @@ const BookingConfirm = ({ route, navigation }) => {
             <AppText style={styles.infoLabel}>Delivery</AppText>
           </View>
           <AppText style={styles.infoValue}>Free</AppText>
-        </View>
+        </View> */}
 
-        <View style={styles.divider} />
+        {/* <View style={styles.divider} /> */}
       </View>
 
       {/* Absolute bottom booking bar */}

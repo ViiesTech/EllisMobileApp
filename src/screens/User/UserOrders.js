@@ -14,11 +14,16 @@ import VendorHeader from '../../components/VendorHeader';
 import { useGetUserOrdersQuery } from '../../Services/UserServices';
 
 const UserOrders = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('New');
+  const [activeTab, setActiveTab] = useState('Pending');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const tabs = ['New', 'Processing', 'Shipped', 'Delivered'];
+  const tabs = ['Pending', 'Processing', 'Shipped', 'Completed'];
 
-  const statusParam = activeTab === 'New' ? 'pending' : activeTab.toLowerCase();
+  const statusParam =
+    activeTab === 'Pending'
+      ? 'pending'
+      : activeTab === 'Completed'
+      ? 'delivered'
+      : activeTab.toLowerCase();
   const {
     data: ordersData,
     isFetching,
@@ -122,6 +127,18 @@ const UserOrders = ({ navigation }) => {
     }
   };
 
+  const getStatusLabel = status => {
+    if (!status) return '';
+    const s = status.toLowerCase();
+    if (s === 'new' || s === 'pending') {
+      return 'Pending';
+    }
+    if (s === 'delivered') {
+      return 'Completed';
+    }
+    return status;
+  };
+
   return (
     <View style={styles.safeArea}>
       <VendorHeader navigation={navigation} title="ORDERS" goBack={false} />
@@ -223,7 +240,7 @@ const UserOrders = ({ navigation }) => {
                             { color: badgeColors.text },
                           ]}
                         >
-                          {item.status}
+                          {getStatusLabel(item.status)}
                         </AppText>
                       </View>
                       <AppText style={styles.timeAgo}>{item.time}</AppText>

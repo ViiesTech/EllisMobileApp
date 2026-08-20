@@ -47,6 +47,13 @@ const CreateService = ({ route, navigation }) => {
   const [styleCategory, setStyleCategory] = useState('');
   const [errors, setErrors] = useState({});
 
+  // Required Measurements States
+  const [requiredMeasurements, setRequiredMeasurements] = useState([]);
+  const [isAddingMeasurement, setIsAddingMeasurement] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newUnit, setNewUnit] = useState('inches');
+  const [newRequired, setNewRequired] = useState(true);
+
   useEffect(() => {
     if (isEditMode) {
       setName(service.name || '');
@@ -54,8 +61,59 @@ const CreateService = ({ route, navigation }) => {
       setDescription(service.description || '');
       setImageUri(service.image_url || service.image || '');
       setStyleCategory(service.category_name || '');
+
+      // Parse required_measurements from service if editing
+      if (service.required_measurements) {
+        try {
+          const parsed =
+            typeof service.required_measurements === 'string'
+              ? JSON.parse(service.required_measurements)
+              : service.required_measurements;
+          if (Array.isArray(parsed)) {
+            setRequiredMeasurements(parsed);
+          }
+        } catch (e) {
+          console.log('Error parsing required_measurements:', e);
+        }
+      }
     }
   }, [service, isEditMode]);
+
+  const handleAddNewMeasurement = () => {
+    if (!newTitle.trim()) {
+      showToast('Validation Error', 'Measurement title is required.', 'error');
+      return;
+    }
+    const key = newTitle
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+
+    // Check if key already exists
+    if (requiredMeasurements.some(item => item.key === key)) {
+      showToast(
+        'Validation Error',
+        'A measurement field with this name already exists.',
+        'error',
+      );
+      return;
+    }
+
+    const newField = {
+      key,
+      title: newTitle.trim(),
+      description: '',
+      unit: newUnit.trim() || 'inches',
+      required: newRequired,
+    };
+
+    setRequiredMeasurements(prev => [...prev, newField]);
+    setIsAddingMeasurement(false);
+    setNewTitle('');
+    setNewUnit('inches');
+    setNewRequired(true);
+  };
 
   const handlePickImage = () => {
     launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
@@ -104,6 +162,28 @@ const CreateService = ({ route, navigation }) => {
       formData.append('description', description.trim());
       formData.append('category_id', String(categoryId));
 
+      // Append required_measurements
+      formData.append(
+        'required_measurements',
+        JSON.stringify(requiredMeasurements),
+      );
+      requiredMeasurements.forEach((item, index) => {
+        formData.append(`required_measurements[${index}][key]`, item.key);
+        formData.append(`required_measurements[${index}][title]`, item.title);
+        formData.append(
+          `required_measurements[${index}][description]`,
+          item.description || '',
+        );
+        formData.append(
+          `required_measurements[${index}][unit]`,
+          item.unit || 'inches',
+        );
+        formData.append(
+          `required_measurements[${index}][required]`,
+          item.required ? '1' : '0',
+        );
+      });
+
       if (pickedImage) {
         formData.append('image', {
           uri:
@@ -114,6 +194,7 @@ const CreateService = ({ route, navigation }) => {
           type: pickedImage.type || 'image/jpeg',
         });
       }
+      console.log('formData:-', formData);
 
       let response;
       if (isEditMode) {
@@ -152,9 +233,9 @@ const CreateService = ({ route, navigation }) => {
     }
   };
 
-  console.log('styleCategory:-', styleCategory);
-  console.log('categoriesList:-', categoriesList);
-  console.log('Service:-', service?.category_id);
+  // console.log('styleCategory:-', styleCategory);
+  // console.log('categoriesList:-', categoriesList);
+  // console.log('Service:-', service?.category_id);
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -262,6 +343,100 @@ const CreateService = ({ route, navigation }) => {
               multiline
               style={styles.descriptionInput}
             />
+
+            {/* Required Measurements Section */}
+            <View style={styles.measurementsSection}>
+              <AppText style={styles.sectionLabel}>
+                Required Measurements
+              </AppText>
+
+              {requiredMeasurements.map((item, idx) => (
+                <View key={item.key} style={styles.measurementItemRow}>
+                  <View style={styles.measurementItemInfo}>
+                    <AppText style={styles.measurementItemTitle}>
+                      {item.title}
+                    </AppText>
+                    <AppText style={styles.measurementItemUnit}>
+                      Unit: {item.unit}{' '}
+                      {item.required ? '(Required)' : '(Optional)'}
+                    </AppText>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setRequiredMeasurements(prev =>
+                        prev.filter((_, i) => i !== idx),
+                      );
+                    }}
+                    style={styles.deleteBtn}
+                  >
+                    <Feather name="trash-2" size={18} color={Colors.red} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {isAddingMeasurement ? (
+                <View style={styles.addFormCard}>
+                  <TextField
+                    label="Measurement Title"
+                    value={newTitle}
+                    onChangeText={setNewTitle}
+                    placeholder="e.g. Coat Length"
+                  />
+                  <TextField
+                    label="Unit"
+                    value={newUnit}
+                    onChangeText={setNewUnit}
+                    placeholder="e.g. inches"
+                  />
+                  <View style={styles.checkboxRow}>
+                    <TouchableOpacity
+                      style={styles.checkbox}
+                      onPress={() => setNewRequired(prev => !prev)}
+                      activeOpacity={0.7}
+                    >
+                      <Feather
+                        name={newRequired ? 'check-square' : 'square'}
+                        size={20}
+                        color={Colors.primary}
+                      />
+                      <AppText style={styles.checkboxLabel}>
+                        Is Required?
+                      </AppText>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.addFormActions}>
+                    <TouchableOpacity
+                      style={[styles.formBtn, styles.cancelBtn]}
+                      onPress={() => setIsAddingMeasurement(false)}
+                    >
+                      <AppText style={styles.cancelBtnText}>Cancel</AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.formBtn, styles.addBtn]}
+                      onPress={handleAddNewMeasurement}
+                    >
+                      <AppText style={styles.addBtnText}>Add Field</AppText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.addMeasurementBtn}
+                  onPress={() => {
+                    setNewTitle('');
+                    setNewUnit('inches');
+                    setNewRequired(true);
+                    setIsAddingMeasurement(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="plus" size={16} color={Colors.primary} />
+                  <AppText style={styles.addMeasurementBtnText}>
+                    Add Measurement Field
+                  </AppText>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </ScrollView>
 
@@ -437,6 +612,122 @@ const styles = StyleSheet.create({
   arrowIcon: {
     position: 'absolute',
     right: 20,
+  },
+  measurementsSection: {
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 20,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    color: '#7C7C7C',
+    fontWeight: '600',
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  measurementItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FD',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E2E2',
+  },
+  measurementItemInfo: {
+    flex: 1,
+  },
+  measurementItemTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  measurementItemUnit: {
+    fontSize: 12,
+    color: '#7C7C7C',
+  },
+  deleteBtn: {
+    padding: 6,
+    marginLeft: 10,
+  },
+  addMeasurementBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.primary,
+    borderRadius: 24,
+    marginTop: 10,
+  },
+  addMeasurementBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginLeft: 6,
+  },
+  addFormCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E2E2',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 10,
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  checkboxRow: {
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  addFormActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  formBtn: {
+    height: 40,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    borderWidth: 1.2,
+    borderColor: '#000000',
+    backgroundColor: '#FFFFFF',
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  addBtn: {
+    backgroundColor: Colors.primary,
+  },
+  addBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
   },
 });
 

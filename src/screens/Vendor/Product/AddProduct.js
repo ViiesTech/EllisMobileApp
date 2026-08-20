@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -39,7 +39,7 @@ const AddProduct = ({ route, navigation }) => {
 
   const { data: categoriesResponse, isLoading: isLoadingCategories } =
     useGetVendorCategoriesQuery();
-  const categoriesList = categoriesResponse?.data || [];
+  const categoriesList = useMemo(() => categoriesResponse?.data || [], [categoriesResponse]);
 
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
@@ -61,7 +61,43 @@ const AddProduct = ({ route, navigation }) => {
   const [material, setMaterial] = useState(
     editingProduct?.material || 'Pure Silk / Wool',
   );
-  const [color, setColor] = useState(editingProduct?.color || 'Olive Green');
+
+  const getInitialColors = () => {
+    const raw = editingProduct?.color;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+      }
+      if (raw.includes(',')) {
+        return raw.split(',').map(c => c.trim()).filter(Boolean);
+      }
+      return [raw.trim()];
+    }
+    return [];
+  };
+
+  const [colors, setColors] = useState(getInitialColors());
+  const [newColorInput, setNewColorInput] = useState('');
+
+  const handleAddColor = () => {
+    const clean = newColorInput.trim();
+    if (!clean) return;
+    if (colors.includes(clean)) {
+      showToast('Validation Error', 'Color already added.', 'error');
+      return;
+    }
+    setColors([...colors, clean]);
+    setNewColorInput('');
+  };
+
+  const handleRemoveColor = colorToRemove => {
+    setColors(colors.filter(c => c !== colorToRemove));
+  };
 
   useEffect(() => {
     if (editingProduct) {
@@ -76,7 +112,7 @@ const AddProduct = ({ route, navigation }) => {
     } else if (categoriesList.length > 0 && !categoryId) {
       setCategoryId(categoriesList[0].id);
     }
-  }, [editingProduct, categoriesList]);
+  }, [editingProduct, categoriesList, categoryId]);
 
   const getInitialImages = () => {
     if (!editingProduct) return [];
@@ -144,6 +180,11 @@ const AddProduct = ({ route, navigation }) => {
       return;
     }
 
+    if (colors.length === 0) {
+      showToast('Validation Error', 'Please add at least one color', 'error');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('name', name.trim());
@@ -151,7 +192,11 @@ const AddProduct = ({ route, navigation }) => {
       formData.append('description', description.trim());
       formData.append('price', price.trim());
       formData.append('available_stock', stock.trim());
-      formData.append('color', color.trim());
+      
+      colors.forEach(col => {
+        formData.append('color[]', col.trim());
+      });
+
       formData.append('material', material.trim());
 
       images.forEach((img, index) => {
@@ -349,12 +394,45 @@ const AddProduct = ({ route, navigation }) => {
             keyboardType="numeric"
           />
 
-          <TextField
-            label="Color"
-            value={color}
-            onChangeText={setColor}
-            placeholder="Olive Green"
-          />
+          {/* Colors Section */}
+          <View style={styles.colorSection}>
+            <AppText style={styles.dropdownLabel}>Colors Available</AppText>
+            
+            <View style={styles.colorInputRow}>
+              <View style={styles.colorFieldContainer}>
+                <TextField
+                  value={newColorInput}
+                  onChangeText={setNewColorInput}
+                  placeholder="E.g. Blue, Olive Green..."
+                  style={{ marginBottom: 0 }}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.addColorBtn}
+                activeOpacity={0.8}
+                onPress={handleAddColor}
+              >
+                <Feather name="plus" size={20} color="#000000" />
+              </TouchableOpacity>
+            </View>
+
+            {colors.length > 0 && (
+              <View style={styles.colorChipsContainer}>
+                {colors.map((c, idx) => (
+                  <View key={idx} style={styles.colorChip}>
+                    <AppText style={styles.colorChipText}>{c}</AppText>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveColor(c)}
+                      activeOpacity={0.7}
+                      style={styles.removeColorChipBtn}
+                    >
+                      <Feather name="x" size={12} color="#000000" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
 
           <TextField
             label="Material"
@@ -684,6 +762,51 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  colorSection: {
+    marginBottom: 16,
+  },
+  colorInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  colorFieldContainer: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  addColorBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.primary,
+    marginLeft: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  colorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  colorChipText: {
+    fontSize: 13,
+    color: '#000000',
+    fontFamily: Fonts.regular,
+    marginRight: 6,
+  },
+  removeColorChipBtn: {
+    padding: 2,
   },
 });
 

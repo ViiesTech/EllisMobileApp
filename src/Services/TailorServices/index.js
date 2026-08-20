@@ -61,6 +61,13 @@ const getTailorDashboard = () => {
   };
 };
 
+const getTailorProfile = () => {
+  return {
+    url: Endpoints.getTailorProfile,
+    method: apiMethods.get,
+  };
+};
+
 const updateTailorBookingStatus = ({ id, status }) => {
   return {
     url: `${Endpoints.tailorOrders}/${id}/status`,
@@ -107,6 +114,10 @@ export const TailorService = baseApi.injectEndpoints({
       query: updateTailorBookingStatus,
       invalidatesTags: ['TailorBookings'],
     }),
+    getTailorProfile: build.query({
+      query: getTailorProfile,
+      providesTags: ['TailorProfile'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -126,4 +137,6 @@ export const {
   useGetTailorDashboardQuery,
   useLazyGetTailorDashboardQuery,
   useUpdateTailorBookingStatusMutation,
+  useGetTailorProfileQuery,
+  useLazyGetTailorProfileQuery,
 } = TailorService;

@@ -13,6 +13,7 @@ import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
 import { useUpdateTailorBookingStatusMutation } from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const TailorBookingDetails = ({ route, navigation }) => {
   const { booking } = route.params || {};
@@ -90,10 +91,15 @@ const TailorBookingDetails = ({ route, navigation }) => {
           <View style={styles.clientInfo}>
             <AppText style={styles.clientName}>{booking.customerName}</AppText>
             <View style={styles.locationContainer}>
-              <Feather name="map-pin" size={12} color="#7C7C7C" />
+              <Feather
+                name="map-pin"
+                size={12}
+                color="#7C7C7C"
+                style={{ marginTop: 2 }}
+              />
               <AppText style={styles.locationText}>
                 {' '}
-                {booking.address || 'Chicago, United States'}
+                {booking.address || 'N/A'}
               </AppText>
             </View>
           </View>
@@ -103,7 +109,7 @@ const TailorBookingDetails = ({ route, navigation }) => {
         <View style={styles.section}>
           <AppText style={styles.sectionHeader}>Service</AppText>
           <AppText style={styles.sectionBody}>
-            {booking.serviceName || 'Suit Stitching'}
+            {booking.serviceName || 'N/A'}
           </AppText>
         </View>
 
@@ -130,18 +136,73 @@ const TailorBookingDetails = ({ route, navigation }) => {
         <View style={styles.section}>
           <AppText style={styles.sectionHeader}>Measurement Details</AppText>
           <AppText style={styles.sectionBody}>
-            {booking.measurementDetails ||
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'}
+            {booking.measurementDetails || 'N/A'}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText style={styles.sectionHeader}>Shipping Address</AppText>
           <AppText style={styles.sectionBody}>
-            {booking.shippingAddress ||
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod.'}
+            {booking.shippingAddress || 'N/A'}
           </AppText>
         </View>
+
+        {booking.review && (
+          <View style={[styles.section, styles.reviewSection]}>
+            <AppText style={styles.sectionHeader}>Customer Review</AppText>
+            <View style={styles.reviewShowContainer}>
+              <View style={styles.reviewerHeader}>
+                <Image
+                  source={{
+                    uri:
+                      booking.review.user?.profile_image ||
+                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
+                  }}
+                  style={styles.reviewerAvatar}
+                />
+                <View style={styles.reviewerMeta}>
+                  <AppText style={styles.reviewerName}>
+                    {`${booking.review.user?.name || ''} ${
+                      booking.review.user?.last_name || ''
+                    }`.trim() || 'Customer'}
+                  </AppText>
+                  <View style={styles.reviewStarsRow}>
+                    {[1, 2, 3, 4, 5].map(starNum => (
+                      <Ionicons
+                        key={starNum}
+                        name={
+                          starNum <= (booking.review?.rating || 0)
+                            ? 'star'
+                            : 'star-outline'
+                        }
+                        size={10}
+                        color="#DBA83A"
+                        style={{ marginRight: 2 }}
+                      />
+                    ))}
+                  </View>
+                </View>
+                {booking.review?.created_at && (
+                  <AppText style={styles.reviewDateText}>
+                    {new Date(booking.review.created_at).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      },
+                    )}
+                  </AppText>
+                )}
+              </View>
+              {booking.review?.comment ? (
+                <AppText style={styles.reviewCommentText}>
+                  "{booking.review.comment}"
+                </AppText>
+              ) : null}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Action Buttons at Bottom */}
@@ -285,7 +346,7 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   locationText: {
     fontSize: 12,
@@ -367,6 +428,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#9CA3AF',
+  },
+  reviewSection: {
+    marginTop: 10,
+  },
+  reviewShowContainer: {
+    marginTop: 4,
+    padding: 12,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  reviewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  reviewerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+  },
+  reviewerMeta: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  reviewerName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewDateText: {
+    fontSize: 10,
+    color: '#8A8A8F',
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  reviewCommentText: {
+    fontSize: 12,
+    color: '#444444',
+    fontStyle: 'italic',
+    lineHeight: 18,
   },
 });
 

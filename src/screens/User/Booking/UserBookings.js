@@ -29,6 +29,11 @@ const mapApiBookingToUi = b => {
   };
 
   const constructMeasurementDetails = item => {
+    if (Array.isArray(item)) {
+      if (item.length === 0) return 'No measurements provided.';
+      return item.map(m => `${m.title}: ${m.value} ${m.unit || 'inches'}`).join('\n');
+    }
+    if (!item) return 'No measurements provided.';
     return (
       `Suit Type: ${item.suit_type || '2 Piece'}\n` +
       `Fit Type: ${item.fit_type || 'Slim'}\n` +
@@ -57,6 +62,7 @@ const mapApiBookingToUi = b => {
 
   return {
     id: b.id,
+    tailor_id: b.tailor_id || b.tailor?.id || b.tailor?.user_id,
     customerName: b.tailor?.business_name || b.tailor?.name || 'Tailor',
     image: b.tailor?.profile_image,
     address:
@@ -66,13 +72,15 @@ const mapApiBookingToUi = b => {
       ) || 'New York, United States',
     serviceName: b.service?.name,
     serviceDescription: b.service?.description,
-    serviceImage: b.service?.image,
+    serviceImage: b.service?.image_url || b.service?.image,
     price: b.total || '0.00',
     time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
     status: mapStatus(b.status),
     fabricDetails: b.notes || 'No extra fabric/design instructions provided.',
-    measurementDetails: constructMeasurementDetails(b?.measurement),
+    measurementDetails: constructMeasurementDetails(b.measurements || b?.measurement),
     shippingAddress: constructShippingAddress(b),
+    is_reviewed: b.is_reviewed,
+    review: b.review,
   };
 };
 

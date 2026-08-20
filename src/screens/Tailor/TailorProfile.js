@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,11 +13,32 @@ import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { selectUser, setClearStore, setUser } from '../../store/authSlice';
+import { selectUser, setClearStore, setUser, setBusinessProfile } from '../../store/authSlice';
+import { useGetTailorProfileQuery } from '../../Services/TailorServices';
 
 const TailorProfile = ({ navigation }) => {
   const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
+
+  const { data, refetch } = useGetTailorProfileQuery();
+
+  useEffect(() => {
+    if (data?.success && data?.data) {
+      if (data.data.user) {
+        dispatch(setUser(data.data.user));
+      }
+      if (data.data.tailor) {
+        dispatch(setBusinessProfile(data.data.tailor));
+      }
+    }
+  }, [data, dispatch]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      refetch();
+    });
+    return unsubscribe;
+  }, [navigation, refetch]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [

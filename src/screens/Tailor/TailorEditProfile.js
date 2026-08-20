@@ -27,6 +27,7 @@ const TailorEditProfile = ({ navigation }) => {
   const [lastName, setLastName] = useState(userProfile.last_name || '');
   const [email, setEmail] = useState(userProfile.email || '');
   const [imageUri, setImageUri] = useState(userProfile.profile_image || '');
+  const [about, setAbout] = useState(userProfile.about || userProfile.bio || '');
 
   const [tailorEditProfile, { isLoading }] = useTailorEditProfileMutation();
 
@@ -61,6 +62,7 @@ const TailorEditProfile = ({ navigation }) => {
       const formData = new FormData();
       formData.append('name', firstName.trim());
       formData.append('last_name', lastName.trim());
+      formData.append('about', about.trim());
 
       if (
         imageUri &&
@@ -95,6 +97,8 @@ const TailorEditProfile = ({ navigation }) => {
               last_name: response.data.user.last_name || '',
               email: response.data.user.email || email.trim(),
               profile_image: response.data.user.profile_image,
+              about: response.data.user.about || about.trim(),
+              bio: response.data.user.about || about.trim(),
             }),
           );
         }
@@ -171,6 +175,14 @@ const TailorEditProfile = ({ navigation }) => {
               keyboardType="email-address"
               leftIcon="mail"
               editable={false}
+            />
+            <TextField
+              label="About"
+              value={about}
+              onChangeText={setAbout}
+              placeholder="Tell us about yourself..."
+              multiline={true}
+              numberOfLines={4}
             />
             {/* <TextField
               label="Password"

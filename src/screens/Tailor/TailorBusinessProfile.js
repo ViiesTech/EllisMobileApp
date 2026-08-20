@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import TextField from '../../components/TextField';
@@ -18,18 +21,23 @@ import {
   selectUser,
   setBusinessProfile,
   setUser,
-  setUserProfile,
 } from '../../store/authSlice';
 import { showToast, showToastError } from '../../components/Toast';
 import { useTailorBusinessProfileMutation } from '../../Services/Auth';
+import Feather from 'react-native-vector-icons/Feather';
+import { launchImageLibrary } from 'react-native-image-picker';
+import Fonts from '../../config/Fonts';
 
-const SERVICES_DATA = [
-  { label: 'Suit Stitching', value: 'Suit Stitching' },
-  { label: 'Alteration', value: 'Alteration' },
-  { label: 'Tuxedo Stitching', value: 'Tuxedo Stitching' },
-  { label: 'Shirt Tailoring', value: 'Shirt Tailoring' },
-  { label: 'Trouser Hemming', value: 'Trouser Hemming' },
-];
+const { width } = Dimensions.get('window');
+const GRID_ITEM_SIZE = (width - 48 - 28) / 3;
+
+// const SERVICES_DATA = [
+//   { label: 'Suit Stitching', value: 'Suit Stitching' },
+//   { label: 'Alteration', value: 'Alteration' },
+//   { label: 'Tuxedo Stitching', value: 'Tuxedo Stitching' },
+//   { label: 'Shirt Tailoring', value: 'Shirt Tailoring' },
+//   { label: 'Trouser Hemming', value: 'Trouser Hemming' },
+// ];
 
 const TailorBusinessProfile = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -50,6 +58,7 @@ const TailorBusinessProfile = ({ navigation }) => {
     businessProfile?.experience?.trim() || userProfile?.experience?.trim();
   let _servicesOffered =
     businessProfile?.services?.trim() || userProfile?.services?.trim();
+  let _about = businessProfile?.about || userProfile?.about;
 
   const [businessName, setBusinessName] = useState(_businessName);
   const [email, setEmail] = useState(_email);
@@ -58,10 +67,63 @@ const TailorBusinessProfile = ({ navigation }) => {
   const [address, setAddress] = useState(_address);
   const [experience, setExperience] = useState(_experience);
   const [servicesOffered, setServicesOffered] = useState(_servicesOffered);
+  const [about, setAbout] = useState(_about);
+  const user = useSelector(selectUser);
+  // Portfolio gallery logic
+  const getInitialPortfolioImages = useCallback(() => {
+    const raw = userProfile?.portfolio_images || businessProfile?.portfolio_images;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+      return [raw];
+    }
+    return [];
+  }, [userProfile?.portfolio_images, businessProfile?.portfolio_images]);
+
+  const [existingPortfolio, setExistingPortfolio] = useState(
+    getInitialPortfolioImages(),
+  );
+  const [newPortfolioImages, setNewPortfolioImages] = useState([]);
+  const [deletedPortfolioUrls, setDeletedPortfolioUrls] = useState([]);
+
+  useEffect(() => {
+    const initial = getInitialPortfolioImages();
+    setExistingPortfolio(initial);
+  }, [userProfile?.portfolio_images, businessProfile?.portfolio_images, getInitialPortfolioImages]);
 
   const [tailorBusinessProfile, { isLoading }] =
     useTailorBusinessProfileMutation();
 
+  const handlePickPortfolioImages = () => {
+    launchImageLibrary(
+      { mediaType: 'photo', quality: 0.5, selectionLimit: 0 },
+      response => {
+        if (response.didCancel) return;
+        if (response.errorMessage) {
+          console.log('ImagePicker Error: ', response.errorMessage);
+          return;
+        }
+        if (response.assets) {
+          const picked = response.assets.map(asset => asset.uri);
+          setNewPortfolioImages(prev => [...prev, ...picked]);
+        }
+      },
+    );
+  };
+
+  const handleRemoveExisting = url => {
+    setExistingPortfolio(prev => prev.filter(img => img !== url));
+    setDeletedPortfolioUrls(prev => [...prev, url]);
+  };
+
+  const handleRemoveNew = uri => {
+    setNewPortfolioImages(prev => prev.filter(item => item !== uri));
+  };
+  console.log('selectUser:-', user);
   const handleSave = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!businessName.trim()) {
@@ -98,17 +160,33 @@ const TailorBusinessProfile = ({ navigation }) => {
     }
 
     try {
-      const payload = {
-        business_name: businessName.trim(),
-        phone_number: phone.trim(),
-        city: city.trim(),
-        address: address.trim(),
-        experience: experience.trim(),
-        services: servicesOffered.trim(),
-        business_email: email.trim(),
-      };
+      const formData = new FormData();
+      formData.append('business_name', businessName.trim());
+      formData.append('phone_number', phone.trim());
+      formData.append('city', city.trim());
+      formData.append('address', address.trim());
+      formData.append('experience', experience.trim());
+      // formData.append('services', servicesOffered.trim());
+      formData.append('business_email', email.trim());
+      formData.append('about', about.trim());
 
-      const response = await tailorBusinessProfile(payload).unwrap();
+      if (deletedPortfolioUrls.length > 0) {
+        formData.append(
+          'delete_portfolio_images',
+          JSON.stringify(deletedPortfolioUrls),
+        );
+      }
+
+      newPortfolioImages.forEach((uri, idx) => {
+        formData.append('portfolio_images[]', {
+          uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+          name: `portfolio_${idx}_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+
+      console.log('Saving Tailor Business Profile Form Data');
+      const response = await tailorBusinessProfile(formData).unwrap();
       console.log('tailorBusinessProfile response:-', response);
 
       if (response?.success) {
@@ -118,7 +196,7 @@ const TailorBusinessProfile = ({ navigation }) => {
           'success',
         );
         if (response?.data?.user) {
-          dispatch(setUser(response.data.user));
+          dispatch(setUser({ ...user, is_business_profile: true }));
         }
         if (response?.data?.tailor) {
           dispatch(setBusinessProfile(response.data.tailor));
@@ -137,8 +215,6 @@ const TailorBusinessProfile = ({ navigation }) => {
     }
   };
 
-  console.log('userProfile:- ', userProfile);
-  console.log('businessProfile:- ', businessProfile);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -200,7 +276,7 @@ const TailorBusinessProfile = ({ navigation }) => {
             />
 
             {/* Services Offered Dropdown */}
-            <View style={styles.dropdownContainer}>
+            {/* <View style={styles.dropdownContainer}>
               <AppText style={styles.dropdownLabel}>Services Offered</AppText>
               <Dropdown
                 style={styles.dropdown}
@@ -215,6 +291,63 @@ const TailorBusinessProfile = ({ navigation }) => {
                 value={servicesOffered}
                 onChange={item => setServicesOffered(item.value)}
               />
+            </View> */}
+
+            {/* About / Biography Section */}
+            <TextField
+              label="About / Bio"
+              value={about}
+              onChangeText={setAbout}
+              placeholder="Tell clients about your tailoring studio, specialization, etc..."
+              multiline={true}
+              numberOfLines={4}
+            />
+
+            {/* Portfolio Images Section */}
+            <View style={styles.portfolioContainer}>
+              <AppText style={styles.dropdownLabel}>Portfolio Images</AppText>
+              <View style={styles.portfolioGrid}>
+                {existingPortfolio.map((url, idx) => (
+                  <View key={`existing-${idx}`} style={styles.portfolioItem}>
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.portfolioImage}
+                    />
+                    <TouchableOpacity
+                      style={styles.deleteBadge}
+                      activeOpacity={0.8}
+                      onPress={() => handleRemoveExisting(url)}
+                    >
+                      <Feather name="x" size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                {newPortfolioImages.map((uri, idx) => (
+                  <View key={`new-${idx}`} style={styles.portfolioItem}>
+                    <Image
+                      source={{ uri: uri }}
+                      style={styles.portfolioImage}
+                    />
+                    <TouchableOpacity
+                      style={styles.deleteBadge}
+                      activeOpacity={0.8}
+                      onPress={() => handleRemoveNew(uri)}
+                    >
+                      <Feather name="x" size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                <TouchableOpacity
+                  style={styles.addPortfolioBtn}
+                  activeOpacity={0.8}
+                  onPress={handlePickPortfolioImages}
+                >
+                  <Feather name="plus" size={24} color="#8A8A8F" />
+                  <AppText style={styles.addBtnText}>Add Image</AppText>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -255,6 +388,7 @@ const styles = StyleSheet.create({
     color: '#7C7C7C',
     marginBottom: 6,
     marginLeft: 4,
+    fontFamily: Fonts.regular,
   },
   dropdown: {
     height: 52,
@@ -287,6 +421,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     backgroundColor: Colors.white,
+  },
+  portfolioContainer: {
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  portfolioGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  portfolioItem: {
+    width: GRID_ITEM_SIZE,
+    height: GRID_ITEM_SIZE,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    marginVertical: 4,
+    position: 'relative',
+    backgroundColor: '#F5F5F5',
+    overflow: 'hidden',
+  },
+  portfolioImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  deleteBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  addPortfolioBtn: {
+    width: GRID_ITEM_SIZE,
+    height: GRID_ITEM_SIZE,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    marginVertical: 4,
+    borderWidth: 1.5,
+    borderColor: '#E2E2E2',
+    borderStyle: 'dashed',
+    backgroundColor: '#F8F9FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addBtnText: {
+    fontSize: 10,
+    color: '#8A8A8F',
+    marginTop: 4,
+    fontFamily: Fonts.regular,
   },
 });
 

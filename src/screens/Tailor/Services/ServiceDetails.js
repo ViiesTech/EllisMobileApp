@@ -104,6 +104,35 @@ const ServiceDetails = ({ route, navigation }) => {
           </AppText>
         </View>
 
+        {/* Section: Required Measurements */}
+        {(() => {
+          let measurements = [];
+          if (service.required_measurements) {
+            try {
+              measurements = typeof service.required_measurements === 'string'
+                ? JSON.parse(service.required_measurements)
+                : service.required_measurements;
+            } catch (e) {
+              console.log('Error parsing measurements:', e);
+            }
+          }
+          if (!Array.isArray(measurements) || measurements.length === 0) return null;
+          
+          return (
+            <View style={styles.section}>
+              <AppText style={styles.sectionTitle}>Required Measurements</AppText>
+              {measurements.map(item => (
+                <View key={item.key} style={styles.measurementRow}>
+                  <AppText style={styles.measurementTitle}>{item.title}</AppText>
+                  <AppText style={styles.measurementValue}>
+                    Unit: {item.unit} {item.required === '1' || item.required === true ? '(Required)' : '(Optional)'}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+
         {/* Section: Price */}
         <View style={styles.section}>
           <AppText style={styles.sectionTitle}>Service Price</AppText>
@@ -248,6 +277,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#000000',
+  },
+  measurementRow: {
+    backgroundColor: '#F8F9FD',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E2E2',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  measurementTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  measurementValue: {
+    fontSize: 12,
+    color: '#7C7C7C',
   },
 });
 

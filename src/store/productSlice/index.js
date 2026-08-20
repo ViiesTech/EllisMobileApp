@@ -20,11 +20,17 @@ const productSlice = createSlice({
     },
     addToCart: (state, action) => {
       const { product, quantity = 1 } = action.payload;
-      const existing = state.cart.find(item => item.id === product.id);
+      const cartItemId = `${product.id}_${product.selectedColor || 'default'}`;
+      const existing = state.cart.find(item => item.id === cartItemId);
       if (existing) {
         existing.qty += quantity;
       } else {
-        state.cart.push({ ...product, qty: quantity });
+        state.cart.push({
+          ...product,
+          productId: product.id,
+          id: cartItemId,
+          qty: quantity,
+        });
       }
     },
     removeFromCart: (state, action) => {

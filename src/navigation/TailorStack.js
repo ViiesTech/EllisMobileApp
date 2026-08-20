@@ -14,6 +14,7 @@ import PrivacyPolicy from '../screens/CommonScreens/PrivacyPolicy';
 import TermsAndCoditions from '../screens/CommonScreens/TermsAndCoditions';
 import UnderReview from '../screens/Auth/UnderReview';
 import ChangePassword from '../screens/CommonScreens/ChangePassword';
+import TailorNotifications from '../screens/Tailor/TailorNotifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ const TailorStack = () => {
       <Stack.Screen name="TermsAndCoditions" component={TermsAndCoditions} />
       <Stack.Screen name="UnderReview" component={UnderReview} />
       <Stack.Screen name="ChangePassword" component={ChangePassword} />
+      <Stack.Screen name="TailorNotifications" component={TailorNotifications} />
     </Stack.Navigator>
   );
 };

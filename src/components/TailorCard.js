@@ -5,13 +5,17 @@ import AppText from './AppText';
 import Feather from 'react-native-vector-icons/Feather';
 
 export const TailorCard = ({ tailor, onBookNow, onPress }) => {
-  const formatExperience = (exp) => {
+  const formatExperience = exp => {
     if (!exp && exp !== 0) return 'Experience 08 Years';
     const years = exp.toString().replace(/[^0-9]/g, '');
     return `Experience ${years || '08'} Years`;
   };
 
-  const locationText = tailor.address || tailor.city || tailor.location || 'California, United states';
+  const locationText =
+    tailor.address ||
+    tailor.city ||
+    tailor.location ||
+    'California, United states';
   const displayName =
     tailor.name && tailor.last_name
       ? `${tailor.name} ${tailor.last_name}`
@@ -43,7 +47,12 @@ export const TailorCard = ({ tailor, onBookNow, onPress }) => {
           {formatExperience(tailor.experience)}
         </AppText>
         <View style={styles.locationRow}>
-          <Feather name="map-pin" size={11} color={Colors.secondary} style={styles.pinIcon} />
+          <Feather
+            name="map-pin"
+            size={11}
+            color={Colors.secondary}
+            style={styles.pinIcon}
+          />
           <AppText style={styles.location} numberOfLines={1}>
             {locationText}
           </AppText>

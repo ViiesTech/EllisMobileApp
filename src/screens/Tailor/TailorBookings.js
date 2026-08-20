@@ -13,7 +13,6 @@ import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
 import { useGetTailorBookingsQuery } from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
-import ApiConstants from '../../Constants/Api.constants';
 import { resolveImage } from '../../utils';
 import moment from 'moment';
 
@@ -31,7 +30,13 @@ const mapApiBookingToUi = b => {
   };
 
   const constructMeasurementDetails = item => {
-    console.log('item:-', item);
+    if (Array.isArray(item)) {
+      if (item.length === 0) return 'No measurements provided.';
+      return item
+        .map(m => `${m.title}: ${m.value} ${m.unit || 'inches'}`)
+        .join('\n');
+    }
+    if (!item) return 'No measurements provided.';
     return (
       `Suit Type: ${item.suit_type || '2 Piece'}\n` +
       `Fit Type: ${item.fit_type || 'Slim'}\n` +
@@ -71,21 +76,10 @@ const mapApiBookingToUi = b => {
     price: b.total || b.service_price || '0.00',
     time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
     status: mapStatus(b.status),
-    measurementDetails: constructMeasurementDetails(b?.measurement),
-    // Extra fields
-    suitType: b?.measurement?.suit_type,
-    fitType: b?.measurement?.fit_type,
-    coatLength: b?.measurement?.coat_length,
-    shoulderWidth: b?.measurement?.shoulder_width,
-    chestRound: b?.measurement?.chest_round,
-    coatWaist: b?.measurement?.coat_waist,
-    coatHip: b?.measurement?.coat_hip,
-    sleeveLength: b?.measurement?.sleeve_length,
-    pantWaist: b?.measurement?.pant_waist,
-    pantHip: b?.measurement?.pant_hip,
-    trouserLength: b?.measurement?.trouser_length,
-    rise: b?.measurement?.rise,
-    leg: b?.measurement?.leg,
+    measurementDetails: constructMeasurementDetails(
+      b.measurements || b?.measurement,
+    ),
+    review: b?.review || null,
   };
 };
 
@@ -209,7 +203,12 @@ const TailorBookings = ({ navigation }) => {
                       Service: {b.serviceName}
                     </AppText>
                     <View style={styles.locationContainer}>
-                      <Feather name="map-pin" size={10} color="#7C7C7C" />
+                      <Feather
+                        name="map-pin"
+                        size={10}
+                        color="#7C7C7C"
+                        style={{ marginTop: 2 }}
+                      />
                       <AppText style={styles.locationText}>
                         {' '}
                         {b.address}
@@ -332,7 +331,7 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   locationText: {
     fontSize: 11,

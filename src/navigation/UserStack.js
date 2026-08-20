@@ -15,6 +15,8 @@ import UserBookingDetails from '../screens/User/Booking/UserBookingDetails';
 import NearByTailors from '../screens/User/NearByTailors';
 import TailorDetails from '../screens/User/TailorDetails';
 import ChangePassword from '../screens/CommonScreens/ChangePassword';
+import UserNotifications from '../screens/User/UserNotifications';
+import StyleSelection from '../screens/User/Booking/StyleSelection';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,7 @@ const UserStack = () => {
       <Stack.Screen name="Main" component={TabStack} />
       <Stack.Screen name="NearByTailors" component={NearByTailors} />
       <Stack.Screen name="TailorDetails" component={TailorDetails} />
+      <Stack.Screen name="StyleSelection" component={StyleSelection} />
       <Stack.Screen name="Measurement" component={Measurement} />
       <Stack.Screen name="BookingConfirm" component={BookingConfirm} />
       <Stack.Screen name="BookingCheckout" component={BookingCheckout} />
@@ -35,6 +38,7 @@ const UserStack = () => {
       <Stack.Screen name="UserOrderDetails" component={UserOrderDetails} />
       <Stack.Screen name="UserBookingDetails" component={UserBookingDetails} />
       <Stack.Screen name="ChangePassword" component={ChangePassword} />
+      <Stack.Screen name="UserNotifications" component={UserNotifications} />
     </Stack.Navigator>
   );
 };

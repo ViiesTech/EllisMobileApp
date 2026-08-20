@@ -49,7 +49,11 @@ const Home = ({ navigation }) => {
               </AppText>
             </View>
           </View>
-          <TouchableOpacity style={styles.headerBellBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.headerBellBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('UserNotifications')}
+          >
             <Feather name="bell" size={22} color="#000000" />
             <View style={styles.bellBadgeDot} />
           </TouchableOpacity>

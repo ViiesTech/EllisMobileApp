@@ -15,12 +15,19 @@ import VendorHeader from '../../../components/VendorHeader';
 import CustomImageViewer from '../../../components/CustomImageViewer';
 import { useDeleteProductMutation } from '../../../Services/VendorServices';
 import { showToast, showToastError } from '../../../components/Toast';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useGetProductReviewsQuery } from '../../../Services/UserServices';
 
 const ProductDetails = ({ route, navigation }) => {
   const product = route.params?.product;
   console.log('product:-', product);
   const [deleteProductMutation, { isLoading: isDeleting }] =
     useDeleteProductMutation();
+
+  const { data: reviewsDataResponse } = useGetProductReviewsQuery(product?.id, {
+    skip: !product?.id,
+  });
+  const reviewsData = reviewsDataResponse?.data;
 
   const getProductImages = () => {
     const raw = product?.image_url || product?.image || product?.images;
@@ -67,7 +74,23 @@ const ProductDetails = ({ route, navigation }) => {
       ? product.available_stock
       : product?.stock || 0;
   const materialVal = product?.material || 'Standard Fabric';
-  const colorVal = product?.color || 'Olive Green';
+
+  const formatColorValue = raw => {
+    if (!raw) return 'Olive Green';
+    if (Array.isArray(raw)) return raw.join(', ');
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed.join(', ');
+        } catch (e) {}
+      }
+      return raw;
+    }
+    return String(raw);
+  };
+
+  const colorVal = formatColorValue(product?.color);
 
   const isAvailable =
     stockVal === 'Yes' ||
@@ -140,7 +163,7 @@ const ProductDetails = ({ route, navigation }) => {
           <View style={styles.topInfoRight}>
             <AppText style={styles.productNameVendor}>{product.name}</AppText>
             <AppText style={styles.productPriceVendor}>${priceVal}</AppText>
-            <AppText style={styles.productUnitVendor}>Per Meter</AppText>
+            <AppText style={styles.productUnitVendor}>Per Unit</AppText>
           </View>
         </View>
 
@@ -166,6 +189,82 @@ const ProductDetails = ({ route, navigation }) => {
 
           <AppText style={styles.detailSectionHeader}>Material</AppText>
           <AppText style={styles.detailSectionContent}>{materialVal}</AppText>
+
+          {/* Reviews Section */}
+          {reviewsData?.reviews && reviewsData.reviews.length > 0 && (
+            <View style={styles.reviewsBlock}>
+              <View style={styles.reviewsTitleRow}>
+                <AppText style={styles.detailSectionHeaderReviews}>
+                  Reviews ({reviewsData.total_reviews || 0})
+                </AppText>
+                {reviewsData.average_rating ? (
+                  <View style={styles.avgRatingRow}>
+                    <Ionicons name="star" size={14} color="#DBA83A" />
+                    <AppText style={styles.avgRatingText}>
+                      {' '}
+                      {Number(reviewsData.average_rating).toFixed(1)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.reviewsList}>
+                {reviewsData.reviews.map((rev, idx) => (
+                  <View key={rev.id || idx} style={styles.reviewItemCard}>
+                    <View style={styles.reviewerHeader}>
+                      <Image
+                        source={{
+                          uri:
+                            rev.user?.profile_image ||
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
+                        }}
+                        style={styles.reviewerAvatar}
+                      />
+                      <View style={styles.reviewerMeta}>
+                        <AppText style={styles.reviewerName}>
+                          {`${rev.user?.name || ''} ${
+                            rev.user?.last_name || ''
+                          }`.trim() || 'Customer'}
+                        </AppText>
+                        <View style={styles.reviewStarsRow}>
+                          {[1, 2, 3, 4, 5].map(starNum => (
+                            <Ionicons
+                              key={starNum}
+                              name={
+                                starNum <= (rev.rating || 0)
+                                  ? 'star'
+                                  : 'star-outline'
+                              }
+                              size={10}
+                              color="#DBA83A"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                      {rev.created_at && (
+                        <AppText style={styles.reviewDateText}>
+                          {new Date(rev.created_at).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            },
+                          )}
+                        </AppText>
+                      )}
+                    </View>
+                    {rev.comment ? (
+                      <AppText style={styles.reviewCommentText}>
+                        "{rev.comment}"
+                      </AppText>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -315,6 +414,86 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  reviewsBlock: {
+    marginTop: 20,
+    marginBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 20,
+  },
+  reviewsTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailSectionHeaderReviews: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: '#000000',
+    fontWeight: '600',
+  },
+  avgRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF7EE',
+    borderWidth: 1,
+    borderColor: '#DBA83A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  avgRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DBA83A',
+  },
+  reviewsList: {
+    marginTop: 8,
+  },
+  reviewItemCard: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  reviewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F5F5F5',
+  },
+  reviewerMeta: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  reviewerName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewDateText: {
+    fontSize: 9,
+    color: '#8A8A8F',
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  reviewCommentText: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingLeft: 38,
   },
 });
 

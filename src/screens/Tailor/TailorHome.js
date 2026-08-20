@@ -39,6 +39,13 @@ const mapApiBookingToUi = b => {
   };
 
   const constructMeasurementDetails = item => {
+    if (Array.isArray(item)) {
+      if (item.length === 0) return 'No measurements provided.';
+      return item
+        .map(m => `${m.title}: ${m.value} ${m.unit || 'inches'}`)
+        .join('\n');
+    }
+    if (!item) return 'No measurements provided.';
     return (
       `Suit Type: ${item.suit_type || '2 Piece'}\n` +
       `Fit Type: ${item.fit_type || 'Slim'}\n` +
@@ -78,7 +85,9 @@ const mapApiBookingToUi = b => {
     price: b.total || b.service_price || '0.00',
     time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
     status: mapStatus(b.status),
-    measurementDetails: constructMeasurementDetails(b?.measurement),
+    measurementDetails: constructMeasurementDetails(
+      b.measurements || b?.measurement,
+    ),
     // Extra fields
     suitType: b?.measurement?.suit_type,
     fitType: b?.measurement?.fit_type,
@@ -119,7 +128,7 @@ const TailorHome = ({ navigation }) => {
   const bookingsData = data?.data || [];
   const newBookings = bookingsData.map(mapApiBookingToUi);
 
-  console.log('bookingsData:-', bookingsData);
+  // console.log('bookingsData:-', bookingsData);
 
   return (
     <View style={styles.safeArea}>
@@ -142,7 +151,11 @@ const TailorHome = ({ navigation }) => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.bellBtn}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('TailorNotifications')}
+        >
           <Feather name="bell" size={20} color="#000000" />
           <View style={styles.badgeDot} />
         </TouchableOpacity>

@@ -121,7 +121,7 @@ const VendorHome = ({ navigation }) => {
       <VendorHeader
         navigation={navigation}
         homeHeader={true}
-        notification={true}
+        notification={() => navigation.navigate('VendorNotifications')}
         goBack={false}
       />
       <ScrollView

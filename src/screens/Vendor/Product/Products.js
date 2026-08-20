@@ -160,7 +160,7 @@ const Products = ({ navigation }) => {
 
               <View style={styles.priceContainer}>
                 <AppText style={styles.priceText}>${priceVal}</AppText>
-                <AppText style={styles.priceUnit}>Per Meter</AppText>
+                <AppText style={styles.priceUnit}>Per Unit</AppText>
               </View>
             </TouchableOpacity>
           );

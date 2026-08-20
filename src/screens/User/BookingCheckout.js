@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import Fonts from '../../config/Fonts';
@@ -88,6 +89,7 @@ const BookingCheckout = ({ route, navigation }) => {
 
   // Shipping Method state ('Pickup' | 'Standard')
   const [shippingMethod, setShippingMethod] = useState('Pickup');
+  const [notes, setNotes] = useState('');
 
   // Sizing Price Details
   const basePrice = Number(service?.price || bookingData?.price) || 240;
@@ -167,57 +169,21 @@ const BookingCheckout = ({ route, navigation }) => {
       return;
     }
 
-    const suitTypeRaw = String(
-      bookingData?.measurements?.suitType || bookingData?.suitType || '2 Piece',
-    );
-    const suit_type = suitTypeRaw.split(' (')[0] || '2 Piece';
-
-    const fitTypeRaw = String(
-      bookingData?.measurements?.fitType || bookingData?.fitType || 'Slim',
-    );
-    const fit_type = fitTypeRaw.replace(' Fit', '');
-
     const payload = {
       tailor_id: Number(tailor?.id),
       service_id: Number(service?.id),
-      suit_type,
-      fit_type,
-      coat_length: parseMeasurement(bookingData?.measurements?.coatLength, 30),
-      shoulder_width: parseMeasurement(
-        bookingData?.measurements?.shoulderWidth,
-        18,
-      ),
-      chest_round: parseMeasurement(bookingData?.measurements?.chestRound, 40),
-      coat_waist: parseMeasurement(bookingData?.measurements?.coatWaist, 36),
-      coat_hip: parseMeasurement(bookingData?.measurements?.coatHip, 40),
-      sleeves_length: parseMeasurement(
-        bookingData?.measurements?.sleeveLength,
-        25,
-      ),
-      pant_waist: parseMeasurement(bookingData?.measurements?.pantWaist, 34),
-      pant_hip: parseMeasurement(
-        bookingData?.measurements?.pantHip || bookingData?.measurements?.panHip,
-        40,
-      ),
-      pant_length: parseMeasurement(
-        bookingData?.measurements?.trouserLength,
-        42,
-      ),
-      rise: bookingData?.measurements?.rise || bookingData?.rise || 'Regular',
-      leg: bookingData?.measurements?.leg || bookingData?.leg || 'Straight',
-      city: addressInfo.city || 'Springfield',
-      postal_code: addressInfo.zip || '62704',
-      country: 'United States',
-      shipping_method: shippingMethod === 'Pickup' ? 'Pickup' : 'Standard',
+      shipping_method: shippingMethod.toLowerCase(),
       shipping_cost: shippingCost,
-      billing_same_as_shipping: true,
-      billing_first_name: addressInfo.firstName || 'User',
-      billing_last_name: addressInfo.lastName || 'Jhon',
-      billing_address: addressInfo.address || 'ABC test address',
-      billing_city: addressInfo.city || 'New York',
-      billing_postal_code: addressInfo.zip || '0900',
-      billing_country: 'United States',
-      notes: 'Please deliver carefully.',
+      first_name: addressInfo.firstName,
+      last_name: addressInfo.lastName,
+      email: userProfile?.email || 'user@example.com',
+      phone: addressInfo.phone,
+      address: addressInfo.address,
+      city: addressInfo.city,
+      postal_code: addressInfo.zip,
+      country: 'United States',
+      measurements: bookingData?.measurements || [],
+      notes: notes.trim() || bookingData?.notes || 'Please deliver carefully.',
     };
 
     console.log('payload', payload);
@@ -258,7 +224,10 @@ const BookingCheckout = ({ route, navigation }) => {
   // Step 1: Main Checkout View
   if (step === 'checkout') {
     return (
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -396,6 +365,18 @@ const BookingCheckout = ({ route, navigation }) => {
             </AppText>
             <Feather name="chevron-down" size={18} color="#8A8A8F" />
           </TouchableOpacity>
+
+          {/* NOTES / ADDITIONAL INSTRUCTIONS */}
+          <AppText style={styles.sectionHeader}>ADDITIONAL NOTES</AppText>
+          <TextInput
+            style={styles.notesInput}
+            placeholder="E.g. Stitch urgently, call before delivery..."
+            placeholderTextColor="#A3A3A3"
+            multiline
+            numberOfLines={3}
+            value={notes}
+            onChangeText={setNotes}
+          />
         </ScrollView>
 
         {/* Absolute bottom Place Booking bar */}
@@ -423,7 +404,7 @@ const BookingCheckout = ({ route, navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -1113,6 +1094,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 5,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: '#E8EDF9',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: '#000000',
+    fontFamily: Fonts.regular,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    backgroundColor: '#F8F9FD',
+    marginTop: 4,
+    marginBottom: 20,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
+import Fonts from '../../config/Fonts';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, selectCart } from '../../store/productSlice';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { showToast } from '../../components/Toast';
 import CustomImageViewer from '../../components/CustomImageViewer';
 import {
@@ -21,6 +23,7 @@ import {
   DryCleanIcon,
   IronIcon,
 } from '../../assets/svg';
+import { useGetProductReviewsQuery } from '../../Services/UserServices';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,7 +31,11 @@ const UserProductDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const cart = useSelector(selectCart);
   const product = route.params?.product;
-  // console.log('product:->', product);
+
+  const { data: reviewsDataResponse } = useGetProductReviewsQuery(product?.id, {
+    skip: !product?.id,
+  });
+  const reviewsData = reviewsDataResponse?.data;
 
   const getProductImages = () => {
     const rawImage = product.images;
@@ -67,11 +74,41 @@ const UserProductDetails = ({ route, navigation }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isViewerVisible, setIsViewerVisible] = useState(false);
 
+  const colorsList = useMemo(() => {
+    const raw = product?.color;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+      }
+      if (raw.includes(',')) {
+        return raw
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean);
+      }
+      return [raw.trim()];
+    }
+    return [];
+  }, [product?.color]);
+
+  const [selectedColor, setSelectedColor] = useState(colorsList[0] || '');
   const [qty] = useState(1);
-  const isInCart = cart.some(item => item.id === product.id);
+  const isInCart = cart.some(
+    item =>
+      item.productId === product.id && item.selectedColor === selectedColor,
+  );
   const cartTotalItems = cart.length;
 
   const handleAddToCart = () => {
+    if (colorsList.length > 0 && !selectedColor) {
+      showToast('Required', 'Please select a color first.', 'error');
+      return;
+    }
     const rawImage = product.images;
     let singleImage = Array.isArray(rawImage) ? rawImage[0] : rawImage;
     if (
@@ -89,6 +126,7 @@ const UserProductDetails = ({ route, navigation }) => {
     const normalizedProduct = {
       ...product,
       price: product.price,
+      selectedColor: selectedColor || 'Default',
       image:
         singleImage ||
         'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500&auto=format&fit=crop&q=80',
@@ -96,14 +134,6 @@ const UserProductDetails = ({ route, navigation }) => {
     dispatch(addToCart({ product: normalizedProduct, quantity: qty }));
     showToast('Success', 'Item added to cart successfully.', 'success');
   };
-
-  // const toggleSection = section => {
-  //   if (expandedSection === section) {
-  //     setExpandedSection(null);
-  //   } else {
-  //     setExpandedSection(section);
-  //   }
-  // };
 
   const handleDotPress = index => {
     setCurrentImageIndex(index);
@@ -184,11 +214,35 @@ const UserProductDetails = ({ route, navigation }) => {
             {product?.price_per_meter ? 'Per Meter' : 'Per Unit'}
           </AppText>
 
-          {/* Colors Selection Row */}
-          {product.color && (
-            <View style={styles.colorRow}>
-              <AppText style={styles.colorLabel}>Color</AppText>
-              <AppText style={styles.colorValue}>{product.color}</AppText>
+          {/* Colors Selection Section */}
+          {colorsList.length > 0 && (
+            <View style={styles.colorSelectionSection}>
+              <AppText style={styles.sectionHeader}>SELECT COLOR</AppText>
+              <View style={styles.colorChipsRow}>
+                {colorsList.map((col, idx) => {
+                  const isSelected = selectedColor === col;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.colorSelectChip,
+                        isSelected && styles.colorSelectChipActive,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedColor(col)}
+                    >
+                      <AppText
+                        style={[
+                          styles.colorSelectChipText,
+                          isSelected && styles.colorSelectChipTextActive,
+                        ]}
+                      >
+                        {col}
+                      </AppText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -245,6 +299,82 @@ const UserProductDetails = ({ route, navigation }) => {
               </View>
             </View>
           </View>
+
+          {/* Reviews Section */}
+          {reviewsData?.reviews && reviewsData.reviews.length > 0 && (
+            <View style={styles.infoBlock}>
+              <View style={styles.reviewsTitleRow}>
+                <AppText style={styles.sectionHeader}>
+                  REVIEWS ({reviewsData.total_reviews || 0})
+                </AppText>
+                {reviewsData.average_rating ? (
+                  <View style={styles.avgRatingRow}>
+                    <Ionicons name="star" size={14} color="#DBA83A" />
+                    <AppText style={styles.avgRatingText}>
+                      {' '}
+                      {Number(reviewsData.average_rating).toFixed(1)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.reviewsList}>
+                {reviewsData.reviews.map((rev, idx) => (
+                  <View key={rev.id || idx} style={styles.reviewItemCard}>
+                    <View style={styles.reviewerHeader}>
+                      <Image
+                        source={{
+                          uri:
+                            rev.user?.profile_image ||
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
+                        }}
+                        style={styles.reviewerAvatar}
+                      />
+                      <View style={styles.reviewerMeta}>
+                        <AppText style={styles.reviewerName}>
+                          {`${rev.user?.name || ''} ${
+                            rev.user?.last_name || ''
+                          }`.trim() || 'Customer'}
+                        </AppText>
+                        <View style={styles.reviewStarsRow}>
+                          {[1, 2, 3, 4, 5].map(starNum => (
+                            <Ionicons
+                              key={starNum}
+                              name={
+                                starNum <= (rev.rating || 0)
+                                  ? 'star'
+                                  : 'star-outline'
+                              }
+                              size={10}
+                              color="#DBA83A"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                      {rev.created_at && (
+                        <AppText style={styles.reviewDateText}>
+                          {new Date(rev.created_at).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            },
+                          )}
+                        </AppText>
+                      )}
+                    </View>
+                    {rev.comment ? (
+                      <AppText style={styles.reviewCommentText}>
+                        "{rev.comment}"
+                      </AppText>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Care / Shipping Policies Accordion Section */}
           {/* <View style={styles.infoBlock}>
@@ -658,6 +788,107 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  colorSelectionSection: {
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  colorChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  colorSelectChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.2,
+    borderColor: '#E5E7EB',
+    marginRight: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorSelectChipActive: {
+    backgroundColor: '#000000',
+    borderColor: '#000000',
+  },
+  colorSelectChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    fontFamily: Fonts.regular,
+  },
+  colorSelectChipTextActive: {
+    color: '#FFFFFF',
+  },
+  reviewsTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avgRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF7EE',
+    borderWidth: 1,
+    borderColor: '#DBA83A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  avgRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DBA83A',
+  },
+  reviewsList: {
+    marginTop: 8,
+  },
+  reviewItemCard: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  reviewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F5F5F5',
+  },
+  reviewerMeta: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  reviewerName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewDateText: {
+    fontSize: 9,
+    color: '#8A8A8F',
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  reviewCommentText: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingLeft: 38,
   },
 });
 

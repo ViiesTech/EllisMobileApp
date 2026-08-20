@@ -44,7 +44,7 @@ const CartCheckout = ({ navigation }) => {
   const [placeOrderMutation, { isLoading: isPlacingOrder }] =
     usePlaceOrderMutation();
 
-  // Address form states (Pre-filled with mockup data for demo)
+  // Address form states
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
@@ -64,7 +64,7 @@ const CartCheckout = ({ navigation }) => {
     phone: '',
   });
 
-  // Card form states (Pre-filled with mockup data for demo)
+  // Card form states
   const [cardName, setCardName] = useState('');
   const [cardNo, setCardNo] = useState('');
   const [cardExpMonth, setCardExpMonth] = useState('');
@@ -246,8 +246,9 @@ const CartCheckout = ({ navigation }) => {
     try {
       const payload = {
         products: cart.map(item => ({
-          product_id: item.id,
+          product_id: Number(item.productId || item.id),
           quantity: item.qty,
+          color: item.selectedColor || 'Default',
         })),
         shipping_address: savedAddress.address,
         city: savedAddress.city,
@@ -378,6 +379,11 @@ const CartCheckout = ({ navigation }) => {
                         <AppText style={styles.itemCategory}>
                           {item.description || 'Lorem Ipsum Dummy'}
                         </AppText>
+                        {item.selectedColor && (
+                          <AppText style={styles.itemColorDisplay}>
+                            Color: {item.selectedColor}
+                          </AppText>
+                        )}
 
                         <View style={styles.qtyControls}>
                           <TouchableOpacity
@@ -559,6 +565,11 @@ const CartCheckout = ({ navigation }) => {
                         <AppText style={styles.itemCategorySummary}>
                           {item.description || 'Lorem Ipsum Dummy'}
                         </AppText>
+                        {item.selectedColor && (
+                          <AppText style={styles.itemColorDisplaySummary}>
+                            Color: {item.selectedColor}
+                          </AppText>
+                        )}
                         <View style={styles.qtyRowSummary}>
                           <TouchableOpacity
                             style={[
@@ -1342,6 +1353,18 @@ const styles = StyleSheet.create({
   trackOrderBtn: {
     width: '100%',
     marginTop: 20,
+  },
+  itemColorDisplay: {
+    fontSize: 12,
+    color: '#000000',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  itemColorDisplaySummary: {
+    fontSize: 11,
+    color: '#000000',
+    fontWeight: '600',
+    marginTop: 2,
   },
 });
 

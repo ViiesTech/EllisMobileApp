@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,20 +6,168 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {
+  useSubmitReviewMutation,
+  useGetUserOrderDetailsQuery,
+} from '../../Services/UserServices';
+import { showToast } from '../../components/Toast';
 
 const UserOrderDetails = ({ route, navigation }) => {
   const { order } = route.params;
-
+  console.log('order:-', order);
   const displayOrderId = order.id.replace('ord-', '');
-  const itemsCountText = order.itemsInfo
-    ? order.itemsInfo.split(' - ')[0]
-    : '1 Item';
-  const vendorName =
-    order.customerName === 'Liam James' ? 'Andrew Ainsly' : order.customerName;
-  const isPickup = order.shipping_method?.toLowerCase() === 'pickup';
+
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [items, setItems] = useState(order.items || []);
+
+  const { data: orderDetailsData, isFetching } = useGetUserOrderDetailsQuery(
+    displayOrderId,
+    {
+      skip: !displayOrderId,
+    },
+  );
+
+  const apiOrder = orderDetailsData?.data?.order;
+
+  // Sync state if backend data updates
+  useEffect(() => {
+    if (apiOrder?.items) {
+      setItems(apiOrder.items);
+    }
+  }, [apiOrder]);
+
+  const currentOrder = apiOrder
+    ? {
+        ...order,
+        ...apiOrder,
+        items: apiOrder.items || [],
+        vendor: apiOrder.vendor || order.vendor,
+      }
+    : order;
+
+  const itemsCountText = currentOrder.itemsInfo
+    ? currentOrder.itemsInfo.split(' - ')[0]
+    : `${items.length} Item${items.length > 1 ? 's' : ''}`;
+
+  const vendorName = currentOrder.vendor?.user
+    ? `${currentOrder.vendor.user.name} ${
+        currentOrder.vendor.user.last_name || ''
+      }`.trim()
+    : currentOrder.customerName === 'Liam James'
+    ? 'Andrew Ainsly'
+    : currentOrder.customerName;
+
+  const isPickup = currentOrder.shipping_method?.toLowerCase() === 'pickup';
+
+  const getBadgeColors = status => {
+    if (!status) return { bg: '#FEF3C7', text: '#D97706' };
+    const s = status.toLowerCase();
+    if (s === 'new' || s === 'pending') {
+      return { bg: '#FEF3C7', text: '#D97706' };
+    } else if (s === 'processing') {
+      return { bg: '#DBEAFE', text: '#155DFC' };
+    } else if (s === 'shipped') {
+      return { bg: '#E8FBCF', text: '#295C00' };
+    } else {
+      return { bg: '#DCFCE7', text: '#15803D' };
+    }
+  };
+
+  const getStatusLabel = status => {
+    if (!status) return '';
+    const s = status.toLowerCase();
+    if (s === 'new' || s === 'pending') {
+      return 'Pending';
+    }
+    if (s === 'delivered') {
+      return 'Completed';
+    }
+    return status;
+  };
+
+  const badgeColors = getBadgeColors(currentOrder.status);
+  const isCompleted =
+    currentOrder.status?.toLowerCase() === 'delivered' ||
+    currentOrder.status?.toLowerCase() === 'completed';
+
+  const [submitReviewApi, { isLoading: isSubmitting }] =
+    useSubmitReviewMutation();
+
+  const handleOpenReviewModal = item => {
+    setSelectedItem(item);
+    setRating(5);
+    setReviewText('');
+    setReviewModalVisible(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (rating === 0) {
+      showToast('Error', 'Please select a rating.', 'error');
+      return;
+    }
+    try {
+      const payload = {
+        product_id: Number(selectedItem.product_id),
+        order_id: Number(order.order_id || displayOrderId || order.id),
+        rating: Number(rating),
+        comment: reviewText,
+      };
+      console.log('Submitting review with payload:', payload);
+      await submitReviewApi(payload).unwrap();
+      showToast(
+        'Success',
+        `Thank you for reviewing "${
+          selectedItem?.name || 'Item'
+        }". Your review has been submitted successfully!`,
+        'success',
+      );
+      setItems(prevItems =>
+        prevItems.map(it => {
+          const itProductId = Number(
+            it.product_id || it.product?.id || it.productId || it.id,
+          );
+          const selProductId = Number(
+            selectedItem.product_id ||
+              selectedItem.product?.id ||
+              selectedItem.productId ||
+              selectedItem.id,
+          );
+          if (itProductId === selProductId) {
+            return {
+              ...it,
+              is_reviewed: true,
+              review: {
+                rating: Number(rating),
+                comment: reviewText,
+                created_at: new Date().toISOString(),
+              },
+            };
+          }
+          return it;
+        }),
+      );
+      setReviewModalVisible(false);
+      setSelectedItem(null);
+    } catch (error) {
+      console.log('Error submitting review:', error);
+      showToast(
+        'Error',
+        error?.data?.message || 'Failed to submit review. Please try again.',
+        'error',
+      );
+    }
+  };
 
   return (
     <View style={styles.safeArea}>
@@ -49,12 +197,34 @@ const UserOrderDetails = ({ route, navigation }) => {
       >
         {/* Order Header Summary Card */}
         <View style={styles.summaryCard}>
-          <Image source={{ uri: order.image }} style={styles.summaryImg} />
+          <Image
+            source={{ uri: currentOrder.image }}
+            style={styles.summaryImg}
+          />
           <View style={styles.summaryTextContainer}>
-            <AppText style={styles.orderIdText}>
-              Order #{displayOrderId}
-            </AppText>
-            <AppText style={styles.priceText}>${order.price}</AppText>
+            <View style={styles.orderRowHeader}>
+              <AppText style={styles.orderIdText}>
+                Order #{displayOrderId}
+              </AppText>
+              {currentOrder.status && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: badgeColors.bg },
+                  ]}
+                >
+                  <AppText
+                    style={[
+                      styles.statusBadgeText,
+                      { color: badgeColors.text },
+                    ]}
+                  >
+                    {getStatusLabel(currentOrder.status)}
+                  </AppText>
+                </View>
+              )}
+            </View>
+            <AppText style={styles.priceText}>${currentOrder.price}</AppText>
             <AppText style={styles.itemsText}>{itemsCountText}</AppText>
           </View>
         </View>
@@ -63,14 +233,77 @@ const UserOrderDetails = ({ route, navigation }) => {
         <View style={styles.detailsBlock}>
           <AppText style={styles.detailLabel}>Ordered Items</AppText>
           <View style={styles.itemsContainer}>
-            {(order.items || []).map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <AppText style={styles.itemNameText}>
-                  {item.name || 'Item'}
-                </AppText>
-                <AppText style={styles.itemQtyText}>
-                  x{item.quantity || 1}
-                </AppText>
+            {(items || []).map((item, idx) => (
+              <View key={idx} style={styles.itemRowWrapper}>
+                <View style={styles.itemRow}>
+                  <View style={styles.itemInfoCol}>
+                    <AppText style={styles.itemNameText}>
+                      {item.name || 'Item'}
+                    </AppText>
+                    {item.color && (
+                      <AppText style={styles.itemColorText}>
+                        Color: {item.color}
+                      </AppText>
+                    )}
+                  </View>
+                  <AppText style={styles.itemQtyText}>
+                    x{item.quantity || 1}
+                  </AppText>
+                </View>
+                {isCompleted &&
+                  (item.is_reviewed ? (
+                    <View style={styles.reviewShowContainer}>
+                      <View style={styles.reviewShowHeader}>
+                        <View style={styles.reviewStarsRow}>
+                          {[1, 2, 3, 4, 5].map(starNum => (
+                            <Ionicons
+                              key={starNum}
+                              name={
+                                starNum <= (item.review?.rating || 0)
+                                  ? 'star'
+                                  : 'star-outline'
+                              }
+                              size={12}
+                              color="#DBA83A"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </View>
+                        {item.review?.created_at && (
+                          <AppText style={styles.reviewDateText}>
+                            {new Date(
+                              item.review.created_at,
+                            ).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </AppText>
+                        )}
+                      </View>
+                      {item.review?.comment ? (
+                        <AppText style={styles.reviewCommentText}>
+                          "{item.review.comment}"
+                        </AppText>
+                      ) : null}
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.reviewButton}
+                      onPress={() => handleOpenReviewModal(item)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="star-outline"
+                        size={12}
+                        color="#DBA83A"
+                        style={{ marginRight: 4 }}
+                      />
+                      <AppText style={styles.reviewButtonText}>
+                        Write a Review
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
               </View>
             ))}
           </View>
@@ -82,8 +315,10 @@ const UserOrderDetails = ({ route, navigation }) => {
             <>
               <AppText style={styles.detailLabel}>Store Address</AppText>
               <AppText style={styles.detailValue}>
-                {order.vendor?.address || 'N/A'}
-                {order.vendor?.city ? `, ${order.vendor.city}` : ''}
+                {currentOrder.vendor?.address || 'N/A'}
+                {currentOrder.vendor?.city
+                  ? `, ${currentOrder.vendor.city}`
+                  : ''}
               </AppText>
             </>
           ) : (
@@ -94,6 +329,79 @@ const UserOrderDetails = ({ route, navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Review Modal */}
+      <Modal
+        visible={reviewModalVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setReviewModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Feather name="x" size={20} color="#000000" />
+            </TouchableOpacity>
+
+            <AppText style={styles.modalTitle}>Write a Review</AppText>
+            <AppText style={styles.modalSubtitle} numberOfLines={2}>
+              {selectedItem?.name || 'Item'}
+            </AppText>
+
+            {/* Stars Row */}
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map(starNum => {
+                const isFilled = starNum <= rating;
+                return (
+                  <TouchableOpacity
+                    key={starNum}
+                    onPress={() => setRating(starNum)}
+                    activeOpacity={0.7}
+                    style={styles.starTouch}
+                  >
+                    <Ionicons
+                      name={isFilled ? 'star' : 'star-outline'}
+                      size={32}
+                      color={isFilled ? '#DBA83A' : '#EAEAEA'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Review Input */}
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Tell us about your experience with this item..."
+              placeholderTextColor="#8E8E93"
+              multiline
+              numberOfLines={4}
+              value={reviewText}
+              onChangeText={setReviewText}
+              textAlignVertical="top"
+            />
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={handleSubmitReview}
+              activeOpacity={0.8}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <AppText style={styles.submitBtnText}>Submit Review</AppText>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -172,6 +480,21 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 20,
   },
+  orderRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
   orderIdText: {
     fontSize: 16,
     fontWeight: '700',
@@ -207,24 +530,151 @@ const styles = StyleSheet.create({
   itemsContainer: {
     marginBottom: 26,
   },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  itemRowWrapper: {
     paddingVertical: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: '#EAEAEA',
   },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FAF7EE',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#DBA83A',
+  },
+  reviewButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#DBA83A',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    padding: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#8A8A8F',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 12,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  starTouch: {
+    marginHorizontal: 6,
+  },
+  reviewInput: {
+    width: '100%',
+    height: 100,
+    borderColor: '#EAEAEA',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 13,
+    color: '#000000',
+    backgroundColor: '#FBFBFB',
+    marginBottom: 24,
+  },
+  submitBtn: {
+    width: '100%',
+    height: 48,
+    backgroundColor: '#DBA83A',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   itemNameText: {
     fontSize: 13,
     color: '#8A8A8F',
-    flex: 1,
   },
   itemQtyText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#000000',
     marginLeft: 10,
+  },
+  itemInfoCol: {
+    flex: 1,
+  },
+  itemColorText: {
+    fontSize: 11,
+    color: '#8A8A8F',
+    marginTop: 2,
+  },
+  reviewShowContainer: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  reviewShowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewDateText: {
+    fontSize: 10,
+    color: '#8A8A8F',
+  },
+  reviewCommentText: {
+    fontSize: 11,
+    color: '#444444',
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
 });
 

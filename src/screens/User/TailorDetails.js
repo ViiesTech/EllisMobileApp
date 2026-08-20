@@ -14,13 +14,13 @@ import Fonts from '../../config/Fonts';
 
 const TailorDetails = ({ route, navigation }) => {
   const tailor = route.params?.tailor;
-  const tailorServices = tailor.services;
-  const [selectedService, setSelectedService] = useState(tailorServices[0]);
-  const email = tailor.email;
-  const displayName = `${tailor.name} ${tailor.last_name}`;
-  const imageUrl = tailor.profile_image_url;
+  const tailorCategories = tailor?.categories || [];
+  const [selectedCategory, setSelectedCategory] = useState(tailorCategories[0]);
+  const email = tailor?.email;
+  const displayName = `${tailor?.name} ${tailor?.last_name}`;
+  const imageUrl = tailor?.profile_image_url;
 
-  // console.log('selectedService:-', selectedService);
+  // console.log('selectedCategory:-', selectedCategory);
   console.log('tailor:-', tailor);
 
   const getPortfolioImages = () => {
@@ -66,8 +66,7 @@ const TailorDetails = ({ route, navigation }) => {
           {/* About Section */}
           <AppText style={styles.sectionHeader}>ABOUT</AppText>
           <AppText style={styles.bio}>
-            {tailor.bio ||
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.'}
+            {tailor.about || 'No information available'}
           </AppText>
 
           {/* Experience Section */}
@@ -99,19 +98,19 @@ const TailorDetails = ({ route, navigation }) => {
             </>
           )}
 
-          {/* Services Section */}
-          <AppText style={styles.sectionHeader}>SERVICES</AppText>
+          {/* Categories Section */}
+          <AppText style={styles.sectionHeader}>CATEGORIES</AppText>
           <View style={styles.servicesRow}>
-            {tailorServices.map(svc => {
-              const isSelected = selectedService?.id === svc.id;
+            {tailorCategories?.map(cat => {
+              const isSelected = selectedCategory?.id === cat.id;
               return (
                 <TouchableOpacity
-                  key={svc.id}
+                  key={cat.id}
                   style={[
                     styles.serviceChip,
                     isSelected && styles.serviceChipSelected,
                   ]}
-                  onPress={() => setSelectedService(svc)}
+                  onPress={() => setSelectedCategory(cat)}
                   activeOpacity={0.85}
                 >
                   <AppText
@@ -120,24 +119,24 @@ const TailorDetails = ({ route, navigation }) => {
                       isSelected && styles.serviceChipTextSelected,
                     ]}
                   >
-                    {svc.name}
+                    {cat?.name || 'N/A'}
                   </AppText>
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* Selected Service Detail Info Box */}
-          {selectedService && (
+          {/* Selected Category Detail Info Box */}
+          {selectedCategory && (
             <View style={styles.detailInfoBox}>
               <AppText style={styles.detailTitle}>
-                {'Service Name : ' + selectedService.name}
-              </AppText>
-              <AppText style={styles.detailCategory}>
-                {'Service Category : ' + selectedService.category}
+                {'Category Name : ' + selectedCategory?.name}
               </AppText>
               <AppText style={styles.detailDesc}>
-                {'Service Description : ' + selectedService.description}
+                {'Category Description : ' +
+                  (selectedCategory?.description ||
+                    'Explore custom tailoring options for ' +
+                      selectedCategory?.name)}
               </AppText>
               <View style={styles.detailMetaRow}>
                 <View style={styles.metaLabelRow}>
@@ -148,12 +147,12 @@ const TailorDetails = ({ route, navigation }) => {
                     style={{ marginRight: 5 }}
                   />
                   <AppText style={styles.detailTime}>
-                    Estimated Time: {selectedService.time || '3-5 Days'}
+                    Estimated Time: {selectedCategory?.time || '3-5 Days'}
                   </AppText>
                 </View>
-                <AppText style={styles.detailPrice}>
-                  ${selectedService.price}
-                </AppText>
+                {/* <AppText style={styles.detailPrice}>
+                  ${selectedCategory?.price || '150'}
+                </AppText> */}
               </View>
             </View>
           )}
@@ -166,9 +165,8 @@ const TailorDetails = ({ route, navigation }) => {
           style={styles.bookBtn}
           activeOpacity={0.9}
           onPress={() =>
-            navigation.navigate('Measurement', {
+            navigation.navigate('StyleSelection', {
               tailor,
-              service: selectedService,
             })
           }
         >

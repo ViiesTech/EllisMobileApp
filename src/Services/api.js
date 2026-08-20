@@ -98,6 +98,7 @@ export const baseApi = createApi({
     'TailorBookings',
     'UserProducts',
     'UserBookings',
+    'TailorProfile',
   ],
   endpoints: () => ({}),
 });

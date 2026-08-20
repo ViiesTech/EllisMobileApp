@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,38 +12,17 @@ import TextField from '../../../components/TextField';
 import AppText from '../../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import { showToast } from '../../../components/Toast';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { selectUser } from '../../../store/authSlice';
-import { addBooking } from '../../../store/bookingSlice';
 import VendorHeader from '../../../components/VendorHeader';
 
 const Measurement = ({ route, navigation }) => {
-  const dispatch = useDispatch();
   const userProfile = useSelector(selectUser) || {};
   const tailor = route.params?.tailor;
   const service = route.params?.service;
 
-  // Basic Sizing States
-  const [suitType, setSuitType] = useState('');
-  const [fitType, setFitType] = useState('');
-
-  // Coat Measurements States
-  const [coatLength, setCoatLength] = useState('');
-  const [shoulderWidth, setShoulderWidth] = useState('');
-  const [chestRound, setChestRound] = useState('');
-  const [coatWaist, setCoatWaist] = useState('');
-  const [coatHip, setCoatHip] = useState('');
-  const [sleeveLength, setSleeveLength] = useState('');
-  const [neckSize, setNeckSize] = useState('');
-
-  // Pant Measurements States
-  const [pantWaist, setPantWaist] = useState('');
-  const [pantHip, setPantHip] = useState('');
-  const [trouserLength, setTrouserLength] = useState('');
-  const [rise, setRise] = useState('');
-  const [leg, setLeg] = useState('');
-
-  // Helper States
+  const requiredMeasurements = useMemo(() => service?.required_measurements || [], [service]);
+  const [measurementValues, setMeasurementValues] = useState({});
   const [errors, setErrors] = useState({});
 
   // Springfield default fallback constants
@@ -51,90 +30,35 @@ const Measurement = ({ route, navigation }) => {
   const [time] = useState('10:30 AM');
   const [address] = useState('742 Evergreen Terrace, Springfield');
 
+  // Initialize measurement inputs
+  useEffect(() => {
+    if (requiredMeasurements.length > 0) {
+      const initialValues = {};
+      requiredMeasurements.forEach(item => {
+        initialValues[item.key] = '';
+      });
+      setMeasurementValues(initialValues);
+    }
+  }, [service, requiredMeasurements]);
+
   const handleConfirm = () => {
     const newErrors = {};
 
-    // Validate Sizing Selections
-    if (!suitType) {
-      newErrors.suitType = 'Suit Type selection is required';
-    }
-    if (!fitType) {
-      newErrors.fitType = 'Fit Type selection is required';
-    }
-    if (!rise) {
-      newErrors.rise = 'Rise selection is required';
-    }
-    if (!leg) {
-      newErrors.leg = 'Leg selection is required';
-    }
-
-    // Validate Coat Sizing Metrics
-    if (!coatLength.trim()) {
-      newErrors.coatLength = 'Coat Length is required';
-    } else if (isNaN(coatLength) || Number(coatLength) <= 0) {
-      newErrors.coatLength = 'Must be a valid number';
-    }
-
-    if (!shoulderWidth.trim()) {
-      newErrors.shoulderWidth = 'Shoulder Width is required';
-    } else if (isNaN(shoulderWidth) || Number(shoulderWidth) <= 0) {
-      newErrors.shoulderWidth = 'Must be a valid number';
-    }
-
-    if (!chestRound.trim()) {
-      newErrors.chestRound = 'Chest Round is required';
-    } else if (isNaN(chestRound) || Number(chestRound) <= 0) {
-      newErrors.chestRound = 'Must be a valid number';
-    }
-
-    if (!coatWaist.trim()) {
-      newErrors.coatWaist = 'Coat Waist is required';
-    } else if (isNaN(coatWaist) || Number(coatWaist) <= 0) {
-      newErrors.coatWaist = 'Must be a valid number';
-    }
-
-    if (!coatHip.trim()) {
-      newErrors.coatHip = 'Coat Hip is required';
-    } else if (isNaN(coatHip) || Number(coatHip) <= 0) {
-      newErrors.coatHip = 'Must be a valid number';
-    }
-
-    if (!sleeveLength.trim()) {
-      newErrors.sleeveLength = 'Sleeve Length is required';
-    } else if (isNaN(sleeveLength) || Number(sleeveLength) <= 0) {
-      newErrors.sleeveLength = 'Must be a valid number';
-    }
-
-    if (!neckSize.trim()) {
-      newErrors.neckSize = 'Neck Size is required';
-    } else if (isNaN(neckSize) || Number(neckSize) <= 0) {
-      newErrors.neckSize = 'Must be a valid number';
-    }
-
-    // Validate Pant Sizing Metrics
-    if (!pantWaist.trim()) {
-      newErrors.pantWaist = 'Pant Waist is required';
-    } else if (isNaN(pantWaist) || Number(pantWaist) <= 0) {
-      newErrors.pantWaist = 'Must be a valid number';
-    }
-
-    if (!pantHip.trim()) {
-      newErrors.pantHip = 'Pant Hip is required';
-    } else if (isNaN(pantHip) || Number(pantHip) <= 0) {
-      newErrors.pantHip = 'Must be a valid number';
-    }
-
-    if (!trouserLength.trim()) {
-      newErrors.trouserLength = 'Trouser Length is required';
-    } else if (isNaN(trouserLength) || Number(trouserLength) <= 0) {
-      newErrors.trouserLength = 'Must be a valid number';
-    }
+    requiredMeasurements.forEach(item => {
+      const val = measurementValues[item.key] || '';
+      const isRequired = item.required === '1' || item.required === 1 || item.required === true;
+      if (isRequired && !val.trim()) {
+        newErrors[item.key] = `${item.title} is required`;
+      } else if (val.trim() && (isNaN(val) || Number(val) <= 0)) {
+        newErrors[item.key] = 'Must be a valid number';
+      }
+    });
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       showToast(
         'Validation Error',
-        'Please fill all measurements with valid numbers.',
+        'Please fill all required measurements with valid numbers.',
         'error',
       );
       return;
@@ -142,10 +66,18 @@ const Measurement = ({ route, navigation }) => {
 
     setErrors({});
 
-    const serializedDetails =
-      `Suit Type: ${suitType}\nFit Type: ${fitType}\n` +
-      `Coat Measurements: Length: ${coatLength} in, Shoulder: ${shoulderWidth} in, Chest: ${chestRound} in, Waist: ${coatWaist} in, Hip: ${coatHip} in, Sleeve: ${sleeveLength} in, Neck: ${neckSize} in\n` +
-      `Pant Measurements: Waist: ${pantWaist} in, Hip: ${pantHip} in, Length: ${trouserLength} in, Rise: ${rise}, Leg: ${leg}`;
+    const measurementsArray = requiredMeasurements.map(item => ({
+      key: item.key,
+      title: item.title,
+      description: item.description,
+      unit: item.unit || 'inches',
+      required: item.required === '1' || item.required === 1 || item.required === true,
+      value: Number(measurementValues[item.key]) || 0,
+    }));
+
+    const serializedDetails = measurementsArray
+      .map(item => `${item.title}: ${item.value} ${item.unit}`)
+      .join('\n');
 
     const bookingData = {
       serviceName: service ? service.name : 'Custom Fitting',
@@ -159,25 +91,7 @@ const Measurement = ({ route, navigation }) => {
       phone: userProfile.phone || '+1 234 567 8900',
       address,
       measurementDetails: serializedDetails,
-      suitType,
-      fitType,
-      measurements: {
-        suitType,
-        fitType,
-        coatLength: `${coatLength} in`,
-        shoulderWidth: `${shoulderWidth} in`,
-        chestRound: `${chestRound} in`,
-        coatWaist: `${coatWaist} in`,
-        coatHip: `${coatHip} in`,
-        sleeveLength: `${sleeveLength} in`,
-        neckSize: `${neckSize} in`,
-        pantWaist: `${pantWaist} in`,
-        pantHip: `${pantHip} in`,
-        panHip: `${pantHip} in`,
-        trouserLength: `${trouserLength} in`,
-        rise,
-        leg,
-      },
+      measurements: measurementsArray,
     };
 
     navigation.navigate('BookingConfirm', {
@@ -186,23 +100,6 @@ const Measurement = ({ route, navigation }) => {
       service,
     });
   };
-
-  const renderRadioButton = (label, selected, onPress) => (
-    <TouchableOpacity
-      style={styles.radioRow}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-        {selected && <View style={styles.radioInner} />}
-      </View>
-      <AppText
-        style={[styles.radioLabel, selected && styles.radioLabelSelected]}
-      >
-        {label}
-      </AppText>
-    </TouchableOpacity>
-  );
 
   const inputContainerStyle = {
     borderWidth: 0,
@@ -233,163 +130,42 @@ const Measurement = ({ route, navigation }) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* BASIC DETAILS */}
-          <AppText style={styles.sectionHeader}>BASIC DETAILS</AppText>
-
-          <AppText style={styles.subsectionHeader}>SUIT TYPE</AppText>
-          {renderRadioButton(
-            '2 Piece (Coat + Pant)',
-            suitType === '2 Piece (Coat + Pant)',
-            () => {
-              setSuitType('2 Piece (Coat + Pant)');
-              if (errors.suitType)
-                setErrors(prev => ({ ...prev, suitType: null }));
-            },
-          )}
-          {renderRadioButton(
-            '3 Piece (Coat + Waistcoat + Pant)',
-            suitType === '3 Piece (Coat + Waistcoat + Pant)',
-            () => {
-              setSuitType('3 Piece (Coat + Waistcoat + Pant)');
-              if (errors.suitType)
-                setErrors(prev => ({ ...prev, suitType: null }));
-            },
-          )}
-          {errors.suitType && (
-            <AppText style={styles.errorText}>{errors.suitType}</AppText>
-          )}
-
-          <AppText style={styles.subsectionHeader}>FIT TYPE</AppText>
-          {renderRadioButton('Slim Fit', fitType === 'Slim Fit', () => {
-            setFitType('Slim Fit');
-            if (errors.fitType) setErrors(prev => ({ ...prev, fitType: null }));
-          })}
-          {renderRadioButton('Regular Fit', fitType === 'Regular Fit', () => {
-            setFitType('Regular Fit');
-            if (errors.fitType) setErrors(prev => ({ ...prev, fitType: null }));
-          })}
-          {renderRadioButton('Loose Fit', fitType === 'Loose Fit', () => {
-            setFitType('Loose Fit');
-            if (errors.fitType) setErrors(prev => ({ ...prev, fitType: null }));
-          })}
-          {errors.fitType && (
-            <AppText style={styles.errorText}>{errors.fitType}</AppText>
-          )}
-
-          {/* COAT MEASUREMENTS */}
-          <AppText style={styles.sectionHeader}>COAT MEASUREMENTS</AppText>
-          <TextField
-            placeholder="Coat Length"
-            value={coatLength}
-            onChangeText={setCoatLength}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.coatLength}
-          />
-          <TextField
-            placeholder="Shoulder Width"
-            value={shoulderWidth}
-            onChangeText={setShoulderWidth}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.shoulderWidth}
-          />
-          <TextField
-            placeholder="Chest Round"
-            value={chestRound}
-            onChangeText={setChestRound}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.chestRound}
-          />
-          <TextField
-            placeholder="Coat Waist"
-            value={coatWaist}
-            onChangeText={setCoatWaist}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.coatWaist}
-          />
-          <TextField
-            placeholder="Coat Hip"
-            value={coatHip}
-            onChangeText={setCoatHip}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.coatHip}
-          />
-          <TextField
-            placeholder="Sleeve Length"
-            value={sleeveLength}
-            onChangeText={setSleeveLength}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.sleeveLength}
-          />
-          <TextField
-            placeholder="Neck Size"
-            value={neckSize}
-            onChangeText={setNeckSize}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.neckSize}
-          />
-
-          {/* PANT MEASUREMENTS */}
-          <AppText style={styles.sectionHeader}>PANT MEASUREMENTS</AppText>
-          <TextField
-            placeholder="Pant Waist"
-            value={pantWaist}
-            onChangeText={setPantWaist}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.pantWaist}
-          />
-          <TextField
-            placeholder="Pant Hip"
-            value={pantHip}
-            onChangeText={setPantHip}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.pantHip}
-          />
-          <TextField
-            placeholder="Trouser Length"
-            value={trouserLength}
-            onChangeText={setTrouserLength}
-            keyboardType="numeric"
-            containerStyle={inputContainerStyle}
-            error={errors.trouserLength}
-          />
-
-          <AppText style={styles.subsectionHeader}>RISE</AppText>
-          {renderRadioButton('Front Rise', rise === 'Front Rise', () => {
-            setRise('Front Rise');
-            if (errors.rise) setErrors(prev => ({ ...prev, rise: null }));
-          })}
-          {renderRadioButton('Back Rise', rise === 'Back Rise', () => {
-            setRise('Back Rise');
-            if (errors.rise) setErrors(prev => ({ ...prev, rise: null }));
-          })}
-          {errors.rise && (
-            <AppText style={styles.errorText}>{errors.rise}</AppText>
-          )}
-
-          <AppText style={styles.subsectionHeader}>LEG</AppText>
-          {renderRadioButton('Thigh Round', leg === 'Thigh Round', () => {
-            setLeg('Thigh Round');
-            if (errors.leg) setErrors(prev => ({ ...prev, leg: null }));
-          })}
-          {renderRadioButton('Knee Round', leg === 'Knee Round', () => {
-            setLeg('Knee Round');
-            if (errors.leg) setErrors(prev => ({ ...prev, leg: null }));
-          })}
-          {renderRadioButton('Bottom Opening', leg === 'Bottom Opening', () => {
-            setLeg('Bottom Opening');
-            if (errors.leg) setErrors(prev => ({ ...prev, leg: null }));
-          })}
-          {errors.leg && (
-            <AppText style={styles.errorText}>{errors.leg}</AppText>
+          {requiredMeasurements.length > 0 ? (
+            <>
+              <AppText style={styles.sectionHeader}>REQUIRED MEASUREMENTS</AppText>
+              {requiredMeasurements.map(item => {
+                const isRequired = item.required === '1' || item.required === 1 || item.required === true;
+                return (
+                  <View key={item.key} style={styles.inputWrapper}>
+                    <AppText style={styles.subsectionHeader}>
+                      {item.title.toUpperCase()} {isRequired ? '*' : ''}
+                    </AppText>
+                    {item.description && (
+                      <AppText style={styles.descriptionText}>
+                        {item.description}
+                      </AppText>
+                    )}
+                    <TextField
+                      placeholder={`Enter ${item.title} (${item.unit || 'inches'})`}
+                      value={measurementValues[item.key] || ''}
+                      onChangeText={text => {
+                        setMeasurementValues(prev => ({ ...prev, [item.key]: text }));
+                        if (errors[item.key]) {
+                          setErrors(prev => ({ ...prev, [item.key]: null }));
+                        }
+                      }}
+                      keyboardType="numeric"
+                      containerStyle={inputContainerStyle}
+                      error={errors[item.key]}
+                    />
+                  </View>
+                );
+              })}
+            </>
+          ) : (
+            <View style={styles.centerContainer}>
+              <AppText style={styles.emptyText}>No measurements required for this style.</AppText>
+            </View>
           )}
         </ScrollView>
 
@@ -570,6 +346,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginLeft: 4,
     marginBottom: 8,
+    fontFamily: Fonts.regular,
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: '#8A8A8F',
+    fontFamily: Fonts.regular,
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  inputWrapper: {
+    marginBottom: 20,
+  },
+  centerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#8A8A8F',
     fontFamily: Fonts.regular,
   },
 });
