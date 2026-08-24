@@ -102,6 +102,29 @@ const getProductReviews = id => {
   };
 };
 
+const getUserNotifications = params => {
+  return {
+    url: Endpoints.userNotifications,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const readNotifications = body => {
+  return {
+    url: Endpoints.readNotifications,
+    method: apiMethods.post,
+    body,
+  };
+};
+
+const getUserBookingDetailsById = id => {
+  return {
+    url: `${Endpoints.getUserBookings}/${id}`,
+    method: apiMethods.get,
+  };
+};
+
 export const UserServices = baseApi.injectEndpoints({
   endpoints: build => ({
     getTailors: build.query({
@@ -155,6 +178,18 @@ export const UserServices = baseApi.injectEndpoints({
     getProductReviews: build.query({
       query: getProductReviews,
     }),
+    getUserNotifications: build.query({
+      query: getUserNotifications,
+      providesTags: ['UserNotifications'],
+    }),
+    readNotifications: build.mutation({
+      query: readNotifications,
+      invalidatesTags: ['UserNotifications'],
+    }),
+    getUserBookingDetailsById: build.query({
+      query: getUserBookingDetailsById,
+      providesTags: ['UserBookings'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -178,4 +213,9 @@ export const {
   useSubmitReviewMutation,
   useGetUserOrderDetailsQuery,
   useGetProductReviewsQuery,
+  useGetUserNotificationsQuery,
+  useLazyGetUserNotificationsQuery,
+  useReadNotificationsMutation,
+  useGetUserBookingDetailsByIdQuery,
+  useLazyGetUserBookingDetailsByIdQuery,
 } = UserServices;

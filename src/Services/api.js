@@ -99,6 +99,9 @@ export const baseApi = createApi({
     'UserProducts',
     'UserBookings',
     'TailorProfile',
+    'TailorNotifications',
+    'VendorNotifications',
+    'UserNotifications',
   ],
   endpoints: () => ({}),
 });

@@ -76,6 +76,28 @@ const updateTailorBookingStatus = ({ id, status }) => {
   };
 };
 
+const getTailorNotifications = params => {
+  return {
+    url: Endpoints.tailorNotifications,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const getServiceDetailsById = id => {
+  return {
+    url: `${Endpoints.getTailorServices}/${id}`,
+    method: apiMethods.get,
+  };
+};
+
+const getTailorBookingDetailsById = id => {
+  return {
+    url: `${Endpoints.tailorOrders}/${id}`,
+    method: apiMethods.get,
+  };
+};
+
 export const TailorService = baseApi.injectEndpoints({
   endpoints: build => ({
     getTailorCategories: build.query({
@@ -118,6 +140,18 @@ export const TailorService = baseApi.injectEndpoints({
       query: getTailorProfile,
       providesTags: ['TailorProfile'],
     }),
+    getTailorNotifications: build.query({
+      query: getTailorNotifications,
+      providesTags: ['TailorNotifications'],
+    }),
+    getServiceDetailsById: build.query({
+      query: getServiceDetailsById,
+      providesTags: ['TailorServices'],
+    }),
+    getTailorBookingDetailsById: build.query({
+      query: getTailorBookingDetailsById,
+      providesTags: ['TailorBookings'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -139,4 +173,10 @@ export const {
   useUpdateTailorBookingStatusMutation,
   useGetTailorProfileQuery,
   useLazyGetTailorProfileQuery,
+  useGetTailorNotificationsQuery,
+  useLazyGetTailorNotificationsQuery,
+  useGetServiceDetailsByIdQuery,
+  useLazyGetServiceDetailsByIdQuery,
+  useGetTailorBookingDetailsByIdQuery,
+  useLazyGetTailorBookingDetailsByIdQuery,
 } = TailorService;

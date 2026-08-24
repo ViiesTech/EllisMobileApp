@@ -50,15 +50,66 @@ const MOCK_NOTIFICATIONS = [
   },
 ];
 
+import { useGetVendorNotificationsQuery } from '../../Services/VendorServices';
+import { useReadNotificationsMutation } from '../../Services/UserServices';
+
 const VendorNotifications = ({ navigation }) => {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: apiResponse, isFetching, refetch } = useGetVendorNotificationsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+  const [readNotifications] = useReadNotificationsMutation();
+
+  const formatTime = createdAt => {
+    if (!createdAt) return 'Just now';
+    const diffMs = new Date() - new Date(createdAt);
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  };
+
+  const mapNotification = item => {
+    if (!item) return null;
+    return {
+      id: String(item.id),
+      title: item.title || 'Notification',
+      message: item.message || item.body || item.text || '',
+      time: formatTime(item.created_at),
+      type: item.type || 'system',
+      isUnread: item.read_at === null || !item.is_read || item.status === 'unread',
+      data: item.data,
+    };
+  };
+
+  const notifications = (apiResponse?.data || []).map(mapNotification).filter(Boolean);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    refetch();
+  };
+
+  const handleMarkAsRead = async item => {
+    try {
+      await readNotifications({ id: item.id, notification_id: item.id }).unwrap();
+      const notificationData = item.data;
+      if (notificationData?.type === 'order' && notificationData?.order_id) {
+        navigation.navigate('VendorOrderDetails', { orderId: Number(notificationData.order_id) });
+      } else if ((notificationData?.type === 'product' || notificationData?.type === 'review') && notificationData?.product_id) {
+        navigation.navigate('ProductDetails', { productId: Number(notificationData.product_id) });
+      }
+    } catch (error) {
+      console.log('Error marking notification as read:', error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await readNotifications({ all: true }).unwrap();
+    } catch (error) {
+      console.log('Error marking all notifications as read:', error);
+    }
   };
 
   const getIcon = type => {
@@ -106,16 +157,6 @@ const VendorNotifications = ({ navigation }) => {
     }
   };
 
-  const handleMarkAsRead = id => {
-    setNotifications(prev =>
-      prev.map(item => (item.id === id ? { ...item, isUnread: false } : item)),
-    );
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -139,7 +180,7 @@ const VendorNotifications = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={isFetching}
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
@@ -161,7 +202,7 @@ const VendorNotifications = ({ navigation }) => {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.notificationRow, item.isUnread && styles.unreadRow]}
-            onPress={() => handleMarkAsRead(item.id)}
+            onPress={() => handleMarkAsRead(item)}
             activeOpacity={0.8}
           >
             <View

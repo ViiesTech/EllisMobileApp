@@ -11,21 +11,131 @@ import {
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import VendorHeader from '../../components/VendorHeader';
-import { useUpdateTailorBookingStatusMutation } from '../../Services/TailorServices';
+import {
+  useUpdateTailorBookingStatusMutation,
+  useGetTailorBookingDetailsByIdQuery,
+} from '../../Services/TailorServices';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { resolveImage } from '../../utils';
+import moment from 'moment';
 
 const TailorBookingDetails = ({ route, navigation }) => {
-  const { booking } = route.params || {};
+  const routeBooking = route.params?.booking;
+  const bookingId = route.params?.bookingId || routeBooking?.id;
+
+  const { data: apiBookingResponse, isLoading: isBookingLoading } =
+    useGetTailorBookingDetailsByIdQuery(bookingId, { skip: !bookingId });
+
   const [updateStatus, { isLoading }] = useUpdateTailorBookingStatusMutation();
   const [activeAction, setActiveAction] = useState(null);
 
-  if (!booking) {
+  const mapStatus = status => {
+    if (!status) return 'Pending';
+    const s = status.toLowerCase();
+    if (s === 'pending') return 'Pending';
+    if (s === 'accepted') return 'Accepted';
+    if (s === 'in_progress' || s === 'in-progress') return 'In Progress';
+    if (s === 'delivered') return 'Delivered';
+    if (s === 'completed') return 'Completed';
+    if (s === 'rejected') return 'Rejected';
+    return status;
+  };
+
+  const constructMeasurementDetails = item => {
+    if (Array.isArray(item)) {
+      if (item.length === 0) return 'No measurements provided.';
+      return item
+        .map(m => `${m.title}: ${m.value} ${m.unit || 'inches'}`)
+        .join('\n');
+    }
+    if (!item) return 'No measurements provided.';
     return (
-      <View style={styles.errorContainer}>
-        <AppText style={styles.errorText}>
-          No booking details available.
-        </AppText>
+      `Suit Type: ${item.suit_type || '2 Piece'}\n` +
+      `Fit Type: ${item.fit_type || 'Slim'}\n` +
+      `Coat Measurements: Length: ${item.coat_length || 0} in, Shoulder: ${
+        item.shoulder_width || 0
+      } in, Chest: ${item.chest_round || 0} in, Waist: ${
+        item.coat_waist || 0
+      } in, Hip: ${item.coat_hip || 0} in, Sleeve: ${
+        item.sleeves_length || 0
+      } in\n` +
+      `Pant Measurements: Waist: ${item.pant_waist || 0} in, Hip: ${
+        item.pant_hip || 0
+      } in, Length: ${item.pant_length || 0} in, Rise: ${
+        item.rise || 'Regular'
+      }, Leg: ${item.leg || 'Straight'}`
+    );
+  };
+
+  const mapApiBookingToUi = b => {
+    if (!b) return null;
+    return {
+      id: b.id,
+      customerName:
+        `${b.user?.name || ''} ${b.user?.last_name || ''}`.trim() || 'Customer',
+      phone: b.phone,
+      address:
+        `${b.address || ''}, ${b.city || ''}, ${b.country || ''}`.replace(
+          /^,\s*|,\s*$/g,
+          '',
+        ) || 'Springfield, United States',
+      shippingAddress: `${b.first_name || ''} ${b.last_name || ''}\n${
+        b.billing_address || b.address || ''
+      }, ${b.billing_city || b.city || ''} ${
+        b.billing_postal_code || b.postal_code || ''
+      }\nPhone: ${b.phone || ''}`,
+      image: resolveImage(b.user?.user_profile_image),
+      serviceName: b.service?.name,
+      serviceDescription: b.service?.description,
+      serviceImage: b.service?.image_url,
+      price: b.total || b.service_price || '0.00',
+      time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
+      status: mapStatus(b.status),
+      measurementDetails: constructMeasurementDetails(
+        b.measurements || b?.measurement,
+      ),
+      review: b?.review || null,
+    };
+  };
+
+  const fetchedBooking = apiBookingResponse?.data
+    ? mapApiBookingToUi(apiBookingResponse.data)
+    : null;
+  const booking = fetchedBooking || routeBooking;
+
+  if (!booking) {
+    if (isBookingLoading) {
+      return (
+        <View style={styles.safeArea}>
+          <VendorHeader
+            navigation={navigation}
+            title="BOOKING DETAILS"
+            goBack={true}
+            homeHeader={false}
+            notification={false}
+          />
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary || '#DBA83A'}
+            />
+          </View>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.safeArea}>
+        <VendorHeader
+          navigation={navigation}
+          title="BOOKING DETAILS"
+          goBack={true}
+          homeHeader={false}
+          notification={false}
+        />
+        <View style={styles.emptyContainer}>
+          <AppText style={styles.emptyText}>Booking details not found.</AppText>
+        </View>
       </View>
     );
   }
@@ -61,7 +171,7 @@ const TailorBookingDetails = ({ route, navigation }) => {
     }
   };
 
-  console.log('booking', booking);
+  console.log('booking:-', booking);
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -476,6 +586,16 @@ const styles = StyleSheet.create({
     color: '#444444',
     fontStyle: 'italic',
     lineHeight: 18,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#7C7C7C',
   },
 });
 

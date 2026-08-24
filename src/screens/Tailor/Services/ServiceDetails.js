@@ -6,23 +6,59 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../../config/Colors';
 import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
 import { getImageSource } from './MyServices';
-import { useDeleteTailorServiceMutation } from '../../../Services/TailorServices';
+import {
+  useDeleteTailorServiceMutation,
+  useGetServiceDetailsByIdQuery,
+} from '../../../Services/TailorServices';
 
 const ServiceDetails = ({ route, navigation }) => {
-  const { service } = route.params || {};
+  const routeService = route.params?.service;
+  const serviceId = route.params?.serviceId || routeService?.id;
+
+  const { data: apiServiceResponse, isLoading: isServiceLoading } =
+    useGetServiceDetailsByIdQuery(serviceId, { skip: !serviceId });
+
+  const service = apiServiceResponse?.data || routeService;
   const [deleteTailorService] = useDeleteTailorServiceMutation();
 
   if (!service) {
+    if (isServiceLoading) {
+      return (
+        <View style={styles.safeArea}>
+          <VendorHeader
+            navigation={navigation}
+            title="SERVICE DETAILS"
+            goBack={true}
+            homeHeader={false}
+            notification={false}
+          />
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary || '#DBA83A'}
+            />
+          </View>
+        </View>
+      );
+    }
     return (
-      <View style={styles.errorContainer}>
-        <AppText style={styles.errorText}>
-          No service details available.
-        </AppText>
+      <View style={styles.safeArea}>
+        <VendorHeader
+          navigation={navigation}
+          title="SERVICE DETAILS"
+          goBack={true}
+          homeHeader={false}
+          notification={false}
+        />
+        <View style={styles.emptyContainer}>
+          <AppText style={styles.emptyText}>Service details not found.</AppText>
+        </View>
       </View>
     );
   }
@@ -109,23 +145,32 @@ const ServiceDetails = ({ route, navigation }) => {
           let measurements = [];
           if (service.required_measurements) {
             try {
-              measurements = typeof service.required_measurements === 'string'
-                ? JSON.parse(service.required_measurements)
-                : service.required_measurements;
+              measurements =
+                typeof service.required_measurements === 'string'
+                  ? JSON.parse(service.required_measurements)
+                  : service.required_measurements;
             } catch (e) {
               console.log('Error parsing measurements:', e);
             }
           }
-          if (!Array.isArray(measurements) || measurements.length === 0) return null;
-          
+          if (!Array.isArray(measurements) || measurements.length === 0)
+            return null;
+
           return (
             <View style={styles.section}>
-              <AppText style={styles.sectionTitle}>Required Measurements</AppText>
+              <AppText style={styles.sectionTitle}>
+                Required Measurements
+              </AppText>
               {measurements.map(item => (
                 <View key={item.key} style={styles.measurementRow}>
-                  <AppText style={styles.measurementTitle}>{item.title}</AppText>
+                  <AppText style={styles.measurementTitle}>
+                    {item.title}
+                  </AppText>
                   <AppText style={styles.measurementValue}>
-                    Unit: {item.unit} {item.required === '1' || item.required === true ? '(Required)' : '(Optional)'}
+                    Unit: {item.unit}{' '}
+                    {item.required === '1' || item.required === true
+                      ? '(Required)'
+                      : '(Optional)'}
                   </AppText>
                 </View>
               ))}
@@ -296,6 +341,16 @@ const styles = StyleSheet.create({
   },
   measurementValue: {
     fontSize: 12,
+    color: '#7C7C7C',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  emptyText: {
+    fontSize: 16,
     color: '#7C7C7C',
   },
 });

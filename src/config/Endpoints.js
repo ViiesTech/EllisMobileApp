@@ -28,4 +28,9 @@ export const Endpoints = {
   getUserBookings: `user/services/orders/get`,
   changePassword: `auth/change-password`,
   submitReview: `user/reviews`,
+  logout: `auth/logout`,
+  userNotifications: `user/notifications`,
+  vendorNotifications: `vendor/notifications`,
+  tailorNotifications: `tailor/notifications`,
+  readNotifications: `user/notifications/read`,
 };

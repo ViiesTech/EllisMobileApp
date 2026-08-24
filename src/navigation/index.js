@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
 import {
@@ -17,6 +17,7 @@ import VendorCompleteProfile from '../screens/Auth/VendorCompleteProfile';
 import TailorCompleteProfile from '../screens/Auth/TailorCompleteProfile';
 
 const Stack = createNativeStackNavigator();
+export const navigationRef = createNavigationContainerRef();
 
 const Routes = () => {
   const token = useSelector(selectToken);
@@ -29,7 +30,7 @@ const Routes = () => {
   console.log('Token:-', token);
   console.log('User:-', user);
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!token ? (
           <Stack.Screen name="AuthStack" component={AuthStack} />

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import Colors from '../../config/Colors';
 import TextField from '../../components/TextField';
 import CustomButton from '../../components/CustomButton';
@@ -8,6 +14,7 @@ import { useDispatch } from 'react-redux';
 import { setToken, setRole, setUser } from '../../store/authSlice';
 import { useLoginMutation } from '../../Services/Auth';
 import { showToast, showToastError } from '../../components/Toast';
+import { getFcmToken } from '../../config/Firebase';
 
 const Login = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -40,11 +47,15 @@ const Login = ({ navigation }) => {
     if (!validate()) return;
 
     try {
+      const fcmToken = await getFcmToken();
+      console.log('fcmToken:-', fcmToken);
       const payload = {
         email: email.trim(),
         password: password,
+        device_token: fcmToken || '',
+        device_type: Platform.OS,
       };
-
+      console.log('payload:-', payload);
       const response = await login(payload).unwrap();
       console.log('Login response:-', response);
 

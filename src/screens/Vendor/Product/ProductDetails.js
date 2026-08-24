@@ -13,13 +13,23 @@ import Fonts from '../../../config/Fonts';
 import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
 import CustomImageViewer from '../../../components/CustomImageViewer';
-import { useDeleteProductMutation } from '../../../Services/VendorServices';
+import {
+  useDeleteProductMutation,
+  useGetVendorProductDetailsByIdQuery,
+} from '../../../Services/VendorServices';
 import { showToast, showToastError } from '../../../components/Toast';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useGetProductReviewsQuery } from '../../../Services/UserServices';
 
 const ProductDetails = ({ route, navigation }) => {
-  const product = route.params?.product;
+  const routeProduct = route.params?.product;
+  const productId = route.params?.productId || routeProduct?.id;
+
+  const { data: apiProductResponse, isLoading: isProductLoading } =
+    useGetVendorProductDetailsByIdQuery(productId, { skip: !productId });
+
+  const product = apiProductResponse?.data || routeProduct;
+
   console.log('product:-', product);
   const [deleteProductMutation, { isLoading: isDeleting }] =
     useDeleteProductMutation();
@@ -28,6 +38,41 @@ const ProductDetails = ({ route, navigation }) => {
     skip: !product?.id,
   });
   const reviewsData = reviewsDataResponse?.data;
+
+  const [isViewerVisible, setIsViewerVisible] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  if (!product) {
+    if (isProductLoading) {
+      return (
+        <View style={styles.safeArea}>
+          <VendorHeader
+            navigation={navigation}
+            title="PRODUCT DETAILS"
+            goBack={true}
+          />
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary || '#DBA83A'}
+            />
+          </View>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.safeArea}>
+        <VendorHeader
+          navigation={navigation}
+          title="PRODUCT DETAILS"
+          goBack={true}
+        />
+        <View style={styles.emptyContainer}>
+          <AppText style={styles.emptyText}>Product not found.</AppText>
+        </View>
+      </View>
+    );
+  }
 
   const getProductImages = () => {
     const raw = product?.image_url || product?.image || product?.images;
@@ -65,8 +110,6 @@ const ProductDetails = ({ route, navigation }) => {
   };
 
   const images = getProductImages();
-  const [isViewerVisible, setIsViewerVisible] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const priceVal = product?.price;
   const stockVal =
@@ -494,6 +537,16 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
     paddingLeft: 38,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#7C7C7C',
   },
 });
 

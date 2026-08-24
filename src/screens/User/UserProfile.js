@@ -7,6 +7,8 @@ import {
   Image,
   Alert,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
@@ -14,9 +16,12 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectUser, setClearStore, setUser } from '../../store/authSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import VendorHeader from '../../components/VendorHeader';
+import { useLogoutMutation } from '../../Services/Auth';
+import { getFcmToken } from '../../config/Firebase';
 
 const UserProfile = ({ navigation }) => {
   const dispatch = useDispatch();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const userProfile = useSelector(selectUser) || {};
   console.log('userProfile:-', userProfile);
 
@@ -25,9 +30,16 @@ const UserProfile = ({ navigation }) => {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
-        onPress: () => {
-          dispatch(setClearStore());
-          dispatch(setUser(null));
+        onPress: async () => {
+          try {
+            const fcmToken = await getFcmToken();
+            await logout({ device_token: fcmToken || '' }).unwrap();
+          } catch (err) {
+            console.log('Logout API error:-', err);
+          } finally {
+            dispatch(setClearStore());
+            dispatch(setUser(null));
+          }
         },
       },
     ]);
@@ -80,6 +92,12 @@ const UserProfile = ({ navigation }) => {
 
   return (
     <View style={styles.safeArea}>
+      <Modal transparent visible={isLoggingOut} animationType="none">
+        <View style={styles.loaderOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary || '#DBA83A'} />
+        </View>
+      </Modal>
+
       <VendorHeader
         navigation={navigation}
         title="PROFILE"
@@ -200,6 +218,12 @@ const styles = StyleSheet.create({
   menuLabelRed: {
     color: '#FF3B30',
     fontWeight: '600',
+  },
+  loaderOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

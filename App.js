@@ -3,6 +3,7 @@ import { StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import { initNotifications } from './src/config/Firebase';
 import Routes from './src/navigation';
 import Colors from './src/config/Colors';
 import { store, persistor } from './src/store';
@@ -13,6 +14,15 @@ import SystemNavigationBar from 'react-native-system-navigation-bar';
 const App = () => {
   useEffect(() => {
     SystemNavigationBar.setImmersive('sticky');
+
+    let unsubscribe = () => {};
+    initNotifications().then(unsub => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   return (

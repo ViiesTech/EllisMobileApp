@@ -14,19 +14,89 @@ import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import { updateOrderStatus, selectOrders } from '../../store/orderSlice';
 import VendorHeader from '../../components/VendorHeader';
-import { useUpdateVendorOrderStatusMutation } from '../../Services/VendorServices';
+import { useUpdateVendorOrderStatusMutation, useGetSingleVendorOrderQuery } from '../../Services/VendorServices';
 
 const VendorOrderDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const routeOrder = route.params?.order;
+  const routeOrderId = route.params?.orderId || routeOrder?.id;
   const orders = useSelector(selectOrders);
   const [updatingAction, setUpdatingAction] = useState(null);
   const [updateOrderStatusApi] = useUpdateVendorOrderStatusMutation();
 
+  const { data: apiOrderResponse, isLoading: isOrderLoading } = useGetSingleVendorOrderQuery(
+    routeOrderId,
+    { skip: !routeOrderId }
+  );
+
+  const mapApiOrderToUi = apiOrder => {
+    if (!apiOrder) return null;
+    const idStr = String(apiOrder.id);
+    let uiStatus = 'Pending';
+    if (apiOrder.status) {
+      uiStatus =
+        apiOrder.status.charAt(0).toUpperCase() + apiOrder.status.slice(1);
+    }
+    const firstItem = apiOrder.items?.[0];
+    const productName = firstItem?.product_name || 'Product';
+    const productImage =
+      firstItem?.product?.image ||
+      firstItem?.product_image ||
+      firstItem?.image ||
+      null;
+    const itemsCount = apiOrder.items?.length || 1;
+    const itemsInfo = `${itemsCount} Item${itemsCount > 1 ? 's' : ''} - $${
+      apiOrder.total
+    }`;
+
+    const customerName = apiOrder.user
+      ? [apiOrder.user.name, apiOrder.user.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Customer'
+      : 'Customer';
+
+    return {
+      id: idStr,
+      status: uiStatus,
+      price: Number(apiOrder.total),
+      itemsInfo,
+      productName,
+      customerName,
+      address: [
+        apiOrder.shipping_address,
+        apiOrder.city,
+        apiOrder.state,
+        apiOrder.zip_code,
+      ]
+        .filter(Boolean)
+        .join(', '),
+      image: productImage,
+    };
+  };
+
   // Look up order dynamically from Redux store to reflect real-time updates
-  const order = orders.find(o => o.id === routeOrder?.id) || routeOrder;
+  const reduxOrder = orders.find(o => String(o.id) === String(routeOrderId));
+  const fetchedOrder = apiOrderResponse?.data ? mapApiOrderToUi(apiOrderResponse.data) : null;
+  const order = reduxOrder || fetchedOrder || routeOrder;
 
   if (!order) {
+    if (isOrderLoading) {
+      return (
+        <View style={styles.safeArea}>
+          <VendorHeader
+            navigation={navigation}
+            title="ORDER DETAILS"
+            goBack={true}
+            homeHeader={false}
+            notification={false}
+          />
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={styles.safeArea}>
         <View style={styles.emptyContainer}>

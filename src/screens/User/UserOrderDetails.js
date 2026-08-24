@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -23,7 +24,7 @@ import { showToast } from '../../components/Toast';
 const UserOrderDetails = ({ route, navigation }) => {
   const { order } = route.params;
   console.log('order:-', order);
-  const displayOrderId = order.id.replace('ord-', '');
+  const displayOrderId = String(order.id).replace('ord-', '');
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
@@ -38,23 +39,103 @@ const UserOrderDetails = ({ route, navigation }) => {
     },
   );
 
+  const [submitReviewApi, { isLoading: isSubmitting }] =
+    useSubmitReviewMutation();
+
   const apiOrder = orderDetailsData?.data?.order;
+
+  const resolveProductImage = rawImage => {
+    if (!rawImage) {
+      return 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop&q=80';
+    }
+
+    let imageUrlStr = '';
+    if (Array.isArray(rawImage)) {
+      imageUrlStr = rawImage[0] || '';
+    } else if (typeof rawImage === 'string') {
+      imageUrlStr = rawImage;
+    }
+
+    imageUrlStr = imageUrlStr.trim();
+    if (imageUrlStr.startsWith('[') && imageUrlStr.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(imageUrlStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          imageUrlStr = parsed[0];
+        }
+      } catch (e) {}
+    }
+
+    if (!imageUrlStr || typeof imageUrlStr !== 'string') {
+      return 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop&q=80';
+    }
+
+    return imageUrlStr;
+  };
+
+  const mapApiOrderToUi = apiO => {
+    if (!apiO) return null;
+    const rawItems = apiO.items || [];
+    const firstItem = rawItems[0] || {};
+    const rawImage =
+      firstItem?.product?.images || firstItem?.product?.image_url;
+    const itemImage = resolveProductImage(rawImage);
+
+    const itemsCount = rawItems.length;
+    const itemsInfoStr = `${itemsCount} Item${
+      itemsCount > 1 ? 's' : ''
+    } - ${rawItems.map(it => it.product?.name || it.name).join(', ')}`;
+
+    const vendorFullName = apiO.vendor?.user
+      ? `${apiO.vendor.user.name} ${apiO.vendor.user.last_name || ''}`.trim()
+      : 'Bespoke Vendor';
+
+    const mappedItems = rawItems.map(it => ({
+      ...it,
+      name: it.product?.name || it.name || 'Product',
+      price: it.price || it.product?.price || '0.00',
+    }));
+
+    return {
+      ...apiO,
+      id: `ord-${apiO.id}`,
+      image: itemImage,
+      vendorName: vendorFullName,
+      customerName: vendorFullName,
+      itemsInfo: itemsInfoStr,
+      price: apiO.total || apiO.subtotal || '0.00',
+      productName:
+        rawItems.map(it => it.product?.name || it.name).join(', ') ||
+        'Bespoke Order',
+      items: mappedItems,
+    };
+  };
+
+  const mappedApiOrder = apiOrder ? mapApiOrderToUi(apiOrder) : null;
 
   // Sync state if backend data updates
   useEffect(() => {
-    if (apiOrder?.items) {
-      setItems(apiOrder.items);
+    if (mappedApiOrder?.items) {
+      setItems(mappedApiOrder.items);
     }
   }, [apiOrder]);
 
-  const currentOrder = apiOrder
+  const currentOrder = mappedApiOrder
     ? {
         ...order,
-        ...apiOrder,
-        items: apiOrder.items || [],
-        vendor: apiOrder.vendor || order.vendor,
+        ...mappedApiOrder,
+        items: mappedApiOrder.items || [],
+        vendor: mappedApiOrder.vendor || order.vendor,
       }
     : order;
+
+  if (isFetching && items.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary || '#DBA83A'} />
+      </View>
+    );
+  }
 
   const itemsCountText = currentOrder.itemsInfo
     ? currentOrder.itemsInfo.split(' - ')[0]
@@ -100,9 +181,6 @@ const UserOrderDetails = ({ route, navigation }) => {
   const isCompleted =
     currentOrder.status?.toLowerCase() === 'delivered' ||
     currentOrder.status?.toLowerCase() === 'completed';
-
-  const [submitReviewApi, { isLoading: isSubmitting }] =
-    useSubmitReviewMutation();
 
   const handleOpenReviewModal = item => {
     setSelectedItem(item);
@@ -674,7 +752,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#444444',
     fontStyle: 'italic',
-    lineHeight: 16,
+    lineHeight: 18,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
 });
 

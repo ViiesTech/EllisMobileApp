@@ -57,6 +57,14 @@ const changePassword = body => {
     body,
   };
 };
+const logout = body => {
+  console.log('logout_body:-', body);
+  return {
+    url: Endpoints.logout,
+    method: apiMethods.post,
+    body,
+  };
+};
 
 const vendorBusinessProfile = body => {
   console.log('vendorBusinessProfile_body:-', body);
@@ -101,6 +109,7 @@ export const AuthService = baseApi.injectEndpoints({
     forgotOTP: build.mutation({ query: forgotOTP }),
     resetPassword: build.mutation({ query: resetPassword }),
     changePassword: build.mutation({ query: changePassword }),
+    logout: build.mutation({ query: logout }),
     vendorBusinessProfile: build.mutation({
       query: vendorBusinessProfile,
     }),
@@ -129,4 +138,5 @@ export const {
   useVendorUpdateProfileMutation,
   useTailorBusinessProfileMutation,
   useTailorEditProfileMutation,
+  useLogoutMutation,
 } = AuthService;

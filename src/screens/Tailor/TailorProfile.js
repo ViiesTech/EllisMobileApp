@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import Colors from '../../config/Colors';
@@ -15,9 +17,12 @@ import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { selectUser, setClearStore, setUser, setBusinessProfile } from '../../store/authSlice';
 import { useGetTailorProfileQuery } from '../../Services/TailorServices';
+import { useLogoutMutation } from '../../Services/Auth';
+import { getFcmToken } from '../../config/Firebase';
 
 const TailorProfile = ({ navigation }) => {
   const dispatch = useDispatch();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const userProfile = useSelector(selectUser) || {};
 
   const { data, refetch } = useGetTailorProfileQuery();
@@ -45,9 +50,16 @@ const TailorProfile = ({ navigation }) => {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
-        onPress: () => {
-          dispatch(setClearStore());
-          dispatch(setUser(null));
+        onPress: async () => {
+          try {
+            const fcmToken = await getFcmToken();
+            await logout({ device_token: fcmToken || '' }).unwrap();
+          } catch (err) {
+            console.log('Logout API error:-', err);
+          } finally {
+            dispatch(setClearStore());
+            dispatch(setUser(null));
+          }
         },
       },
     ]);
@@ -114,6 +126,12 @@ const TailorProfile = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
+      <Modal transparent visible={isLoggingOut} animationType="none">
+        <View style={styles.loaderOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary || '#DBA83A'} />
+        </View>
+      </Modal>
+
       <VendorHeader navigation={navigation} title="PROFILE" goBack={false} />
 
       <ScrollView
@@ -214,6 +232,12 @@ const styles = StyleSheet.create({
   },
   menuLabelRed: {
     color: Colors.red,
+  },
+  loaderOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

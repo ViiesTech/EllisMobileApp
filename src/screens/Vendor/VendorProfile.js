@@ -7,6 +7,8 @@ import {
   Image,
   Alert,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
@@ -15,9 +17,12 @@ import { selectUser, setClearStore } from '../../store/authSlice';
 import VendorHeader from '../../components/VendorHeader';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Feather from 'react-native-vector-icons/Feather';
+import { useLogoutMutation } from '../../Services/Auth';
+import { getFcmToken } from '../../config/Firebase';
 
 const VendorProfile = ({ navigation }) => {
   const dispatch = useDispatch();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const userProfile = useSelector(selectUser) || {};
 
   // Modals are now separate screens, so we only need to dispatch actions and manage logout.
@@ -30,7 +35,16 @@ const VendorProfile = ({ navigation }) => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => dispatch(setClearStore()),
+          onPress: async () => {
+            try {
+              const fcmToken = await getFcmToken();
+              await logout({ device_token: fcmToken || '' }).unwrap();
+            } catch (err) {
+              console.log('Logout API error:-', err);
+            } finally {
+              dispatch(setClearStore());
+            }
+          },
         },
       ],
       { cancelable: true },
@@ -99,6 +113,12 @@ const VendorProfile = ({ navigation }) => {
   console.log('userProfile:->', userProfile);
   return (
     <View style={styles.mainContainer}>
+      <Modal transparent visible={isLoggingOut} animationType="none">
+        <View style={styles.loaderOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary || '#DBA83A'} />
+        </View>
+      </Modal>
+
       <VendorHeader navigation={navigation} title="PROFILE" goBack={false} />
 
       <ScrollView
@@ -271,6 +291,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.Lightgray,
     fontWeight: '600',
+  },
+  loaderOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

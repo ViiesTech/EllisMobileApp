@@ -50,9 +50,31 @@ const updateVendorOrderStatus = ({ id, status }) => {
   };
 };
 
+const getSingleVendorOrder = id => {
+  return {
+    url: `${Endpoints.vendorOrders}/${id}`,
+    method: apiMethods.get,
+  };
+};
+
 const getVendorCategories = () => {
   return {
     url: Endpoints.getVendorCategories,
+    method: apiMethods.get,
+  };
+};
+
+const getVendorNotifications = params => {
+  return {
+    url: Endpoints.vendorNotifications,
+    method: apiMethods.get,
+    params,
+  };
+};
+
+const getVendorProductDetailsById = id => {
+  return {
+    url: `${Endpoints.getMyProducts}/${id}`,
     method: apiMethods.get,
   };
 };
@@ -90,9 +112,21 @@ export const VendorService = baseApi.injectEndpoints({
       query: updateVendorOrderStatus,
       invalidatesTags: ['VendorOrders'],
     }),
+    getSingleVendorOrder: build.query({
+      query: getSingleVendorOrder,
+      providesTags: ['VendorOrders'],
+    }),
     getVendorCategories: build.query({
       query: getVendorCategories,
       providesTags: ['VendorCategories'],
+    }),
+    getVendorNotifications: build.query({
+      query: getVendorNotifications,
+      providesTags: ['VendorNotifications'],
+    }),
+    getVendorProductDetailsById: build.query({
+      query: getVendorProductDetailsById,
+      providesTags: ['VendorProducts'],
     }),
   }),
   overrideExisting: true,
@@ -107,6 +141,12 @@ export const {
   useGetVendorDashboardQuery,
   useGetVendorOrdersQuery,
   useUpdateVendorOrderStatusMutation,
+  useGetSingleVendorOrderQuery,
+  useLazyGetSingleVendorOrderQuery,
   useGetVendorCategoriesQuery,
   useLazyGetVendorCategoriesQuery,
+  useGetVendorNotificationsQuery,
+  useLazyGetVendorNotificationsQuery,
+  useGetVendorProductDetailsByIdQuery,
+  useLazyGetVendorProductDetailsByIdQuery,
 } = VendorService;

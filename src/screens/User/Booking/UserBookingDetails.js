@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,20 +15,104 @@ import AppText from '../../../components/AppText';
 import VendorHeader from '../../../components/VendorHeader';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useSubmitReviewMutation } from '../../../Services/UserServices';
+import { useSubmitReviewMutation, useGetUserBookingDetailsByIdQuery } from '../../../Services/UserServices';
 import { showToast } from '../../../components/Toast';
+import { resolveImage } from '../../../utils';
+import moment from 'moment';
 
 const UserBookingDetails = ({ route, navigation }) => {
-  const { booking } = route.params || {};
-  console.log('booking:-', booking);
+  const routeBooking = route.params?.booking;
+  const bookingId = route.params?.bookingId || routeBooking?.id;
 
-  const [localBooking, setLocalBooking] = useState(booking);
+  const { data: apiBookingResponse, isLoading: isBookingLoading } = useGetUserBookingDetailsByIdQuery(
+    bookingId,
+    { skip: !bookingId }
+  );
+
+  const [localBooking, setLocalBooking] = useState(null);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
   const [submitReviewApi, { isLoading: isSubmitting }] =
     useSubmitReviewMutation();
+
+  const mapStatus = status => {
+    if (!status) return 'Pending';
+    const s = status.toLowerCase();
+    if (s === 'pending') return 'Pending';
+    if (s === 'accepted') return 'Accepted';
+    if (s === 'in_progress' || s === 'in-progress') return 'In Progress';
+    if (s === 'completed') return 'Completed';
+    if (s === 'cancelled') return 'Cancelled';
+    return status;
+  };
+
+  const constructMeasurementDetails = item => {
+    if (Array.isArray(item)) {
+      if (item.length === 0) return 'No measurements provided.';
+      return item.map(m => `${m.title}: ${m.value} ${m.unit || 'inches'}`).join('\n');
+    }
+    if (!item) return 'No measurements provided.';
+    return (
+      `Suit Type: ${item.suit_type || '2 Piece'}\n` +
+      `Fit Type: ${item.fit_type || 'Slim'}\n` +
+      `Coat Measurements: Length: ${item.coat_length || 0} in, Shoulder: ${
+        item.shoulder_width || 0
+      } in, Chest: ${item.chest_round || 0} in, Waist: ${
+        item.coat_waist || 0
+      } in, Hip: ${item.coat_hip || 0} in, Sleeve: ${
+        item.sleeves_length || 0
+      } in\n` +
+      `Pant Measurements: Waist: ${item.pant_waist || 0} in, Hip: ${
+        item.pant_hip || 0
+      } in, Length: ${item.pant_length || 0} in, Rise: ${
+        item.rose || 'Regular'
+      }, Leg: ${item.leg || 'Thigh Round'}`
+    );
+  };
+
+  const constructShippingAddress = item => {
+    return `${item.first_name || ''} ${item.last_name || ''}\n${
+      item.address || ''
+    }, ${item.city || ''} ${item.postal_code || ''}\nPhone: ${
+      item.phone || ''
+    }`;
+  };
+
+  const mapApiBookingToUi = b => {
+    if (!b) return null;
+    return {
+      id: b.id,
+      tailor_id: b.tailor_id || b.tailor?.id || b.tailor?.user_id,
+      customerName: b.tailor?.business_name || b.tailor?.name || 'Tailor',
+      image: b.tailor?.profile_image,
+      address:
+        `${b.tailor?.address || ''}, ${b.tailor?.city || ''}`.replace(
+          /^,\s*|,\s*$/g,
+          '',
+        ) || 'New York, United States',
+      serviceName: b.service?.name,
+      serviceDescription: b.service?.description,
+      serviceImage: b.service?.image_url || b.service?.image,
+      price: b.total || '0.00',
+      time: b.created_at ? moment(b.created_at).format('MM/DD/YYYY') : 'N/A',
+      status: mapStatus(b.status),
+      fabricDetails: b.notes || 'No extra fabric/design instructions provided.',
+      measurementDetails: constructMeasurementDetails(b.measurements || b?.measurement),
+      shippingAddress: constructShippingAddress(b),
+      is_reviewed: b.is_reviewed,
+      review: b.review,
+    };
+  };
+
+  useEffect(() => {
+    if (apiBookingResponse?.data) {
+      setLocalBooking(mapApiBookingToUi(apiBookingResponse.data));
+    } else if (routeBooking) {
+      setLocalBooking(routeBooking);
+    }
+  }, [apiBookingResponse, routeBooking]);
 
   const getBadgeColors = status => {
     if (!status) return { bg: '#FEF3C7', text: '#D97706' };
@@ -112,12 +196,31 @@ const UserBookingDetails = ({ route, navigation }) => {
     }
   };
 
-  if (!booking) {
+  if (!localBooking) {
+    if (isBookingLoading) {
+      return (
+        <View style={styles.safeArea}>
+          <VendorHeader
+            navigation={navigation}
+            title="BOOKING DETAILS"
+            goBack={true}
+          />
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={Colors.primary || '#DBA83A'} />
+          </View>
+        </View>
+      );
+    }
     return (
-      <View style={styles.errorContainer}>
-        <AppText style={styles.errorText}>
-          No booking details available.
-        </AppText>
+      <View style={styles.safeArea}>
+        <VendorHeader
+          navigation={navigation}
+          title="BOOKING DETAILS"
+          goBack={true}
+        />
+        <View style={styles.emptyContainer}>
+          <AppText style={styles.emptyText}>Booking details not found.</AppText>
+        </View>
       </View>
     );
   }
@@ -566,6 +669,16 @@ const styles = StyleSheet.create({
     color: '#444444',
     fontStyle: 'italic',
     lineHeight: 18,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#7C7C7C',
   },
 });
 

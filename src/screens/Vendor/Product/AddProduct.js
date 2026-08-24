@@ -39,7 +39,10 @@ const AddProduct = ({ route, navigation }) => {
 
   const { data: categoriesResponse, isLoading: isLoadingCategories } =
     useGetVendorCategoriesQuery();
-  const categoriesList = useMemo(() => categoriesResponse?.data || [], [categoriesResponse]);
+  const categoriesList = useMemo(
+    () => categoriesResponse?.data || [],
+    [categoriesResponse],
+  );
 
   const [name, setName] = useState(editingProduct?.name || '');
   const [price, setPrice] = useState(
@@ -74,7 +77,10 @@ const AddProduct = ({ route, navigation }) => {
         } catch (e) {}
       }
       if (raw.includes(',')) {
-        return raw.split(',').map(c => c.trim()).filter(Boolean);
+        return raw
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean);
       }
       return [raw.trim()];
     }
@@ -192,7 +198,7 @@ const AddProduct = ({ route, navigation }) => {
       formData.append('description', description.trim());
       formData.append('price', price.trim());
       formData.append('available_stock', stock.trim());
-      
+
       colors.forEach(col => {
         formData.append('color[]', col.trim());
       });
@@ -243,7 +249,8 @@ const AddProduct = ({ route, navigation }) => {
             dispatch(
               editProduct({ id: editingProduct.id, updates: response.data }),
             );
-            navigation.navigate('ProductDetails', { product: response.data });
+            // navigation.navigate('ProductDetails', { product: response.data });
+            navigation.goBack();
             return;
           } else {
             dispatch(addProduct(response.data));
@@ -265,8 +272,6 @@ const AddProduct = ({ route, navigation }) => {
       showToastError('Error', err);
     }
   };
-
-  const categories = ['Fabrics', 'Suits', 'Shirts', 'Trousers'];
 
   return (
     <View style={styles.safeArea}>
@@ -397,7 +402,7 @@ const AddProduct = ({ route, navigation }) => {
           {/* Colors Section */}
           <View style={styles.colorSection}>
             <AppText style={styles.dropdownLabel}>Colors Available</AppText>
-            
+
             <View style={styles.colorInputRow}>
               <View style={styles.colorFieldContainer}>
                 <TextField

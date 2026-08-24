@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "53714182269",
+    "project_id": "ellis-pablo",
+    "storage_bucket": "ellis-pablo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53714182269:android:e572b81e33cd9c639a1114",
+        "android_client_info": {
+          "package_name": "com.ellis"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDImzPcOMdeHc8SQYlwIiH0AK_n0iq-GbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

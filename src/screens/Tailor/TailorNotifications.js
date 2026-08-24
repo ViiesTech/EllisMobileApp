@@ -49,15 +49,65 @@ const MOCK_NOTIFICATIONS = [
   },
 ];
 
+import { useGetTailorNotificationsQuery } from '../../Services/TailorServices';
+import { useReadNotificationsMutation } from '../../Services/UserServices';
+
 const TailorNotifications = ({ navigation }) => {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: apiResponse, isFetching, refetch } = useGetTailorNotificationsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+  const [readNotifications] = useReadNotificationsMutation();
+
+  const formatTime = createdAt => {
+    if (!createdAt) return 'Just now';
+    const diffMs = new Date() - new Date(createdAt);
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  };
+
+  const mapNotification = item => {
+    if (!item) return null;
+    return {
+      id: String(item.id),
+      title: item.title || 'Notification',
+      message: item.message || item.body || item.text || '',
+      time: formatTime(item.created_at),
+      type: item.type || 'system',
+      isUnread: item.read_at === null || !item.is_read || item.status === 'unread',
+      data: item.data,
+    };
+  };
+
+  const notifications = (apiResponse?.data || []).map(mapNotification).filter(Boolean);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    refetch();
+  };
+
+  const handleMarkAsRead = async item => {
+    try {
+      await readNotifications({ id: item.id, notification_id: item.id }).unwrap();
+      const notificationData = item.data;
+      const bookingId = notificationData?.booking_id || notificationData?.order_id;
+      if ((notificationData?.type === 'booking' || notificationData?.type === 'order' || notificationData?.type === 'review') && bookingId) {
+        navigation.navigate('TailorBookingDetails', { bookingId: Number(bookingId) });
+      }
+    } catch (error) {
+      console.log('Error marking notification as read:', error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await readNotifications({ all: true }).unwrap();
+    } catch (error) {
+      console.log('Error marking all notifications as read:', error);
+    }
   };
 
   const getIcon = type => {
@@ -105,16 +155,6 @@ const TailorNotifications = ({ navigation }) => {
     }
   };
 
-  const handleMarkAsRead = id => {
-    setNotifications(prev =>
-      prev.map(item => (item.id === id ? { ...item, isUnread: false } : item)),
-    );
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
   return (
     <View style={styles.safeArea}>
       <VendorHeader
@@ -138,7 +178,7 @@ const TailorNotifications = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={isFetching}
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
@@ -160,7 +200,7 @@ const TailorNotifications = ({ navigation }) => {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.notificationRow, item.isUnread && styles.unreadRow]}
-            onPress={() => handleMarkAsRead(item.id)}
+            onPress={() => handleMarkAsRead(item)}
             activeOpacity={0.8}
           >
             <View

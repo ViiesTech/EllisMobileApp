@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import {
   CodeField,
   Cursor,
@@ -13,6 +13,7 @@ import { useDispatch } from 'react-redux';
 import { setToken, setRole, setUser } from '../../store/authSlice';
 import { showToast, showToastError } from '../../components/Toast';
 import { useSignupMutation, useVerifyOtpMutation } from '../../Services/Auth';
+import { getFcmToken } from '../../config/Firebase';
 
 const CELL_COUNT = 6;
 
@@ -48,9 +49,12 @@ const VerifyOTP = ({ navigation, route }) => {
     }
 
     try {
+      const fcmToken = await getFcmToken();
       const payload = {
         email: email,
         otp: value,
+        device_token: fcmToken || '',
+        device_type: Platform.OS,
       };
 
       const response = await verifyOtp(payload).unwrap();
