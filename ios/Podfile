@@ -12,7 +12,7 @@ prepare_react_native_project!
 
 use_frameworks! :linkage => :dynamic
 
-target 'Ellis' do
+target 'EllisThreadmarks' do
   config = use_native_modules!
 
   pod 'MMKVCore', :path => File.expand_path('~/MMKVCoreLocal')
