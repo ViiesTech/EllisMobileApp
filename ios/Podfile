@@ -15,8 +15,8 @@ target 'EllisThreadmarks' do
   project 'EllisThreadmarks.xcodeproj'
   config = use_native_modules!
 
-  # MMKVCore ke error ko fix karne ke liye explicit node_modules path
-  pod 'MMKVCore', :path => File.expand_path('~/MMKVCoreLocal')
+  # FirebaseCoreInternal is Swift and needs GoogleUtilities to expose a module map.
+  pod 'GoogleUtilities', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
