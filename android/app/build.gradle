@@ -79,6 +79,10 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.ellis"
+    aaptOptions {
+        cruncherEnabled false
+        useNewCruncher false
+    }
     defaultConfig {
         applicationId "com.ellis"
         minSdkVersion rootProject.ext.minSdkVersion

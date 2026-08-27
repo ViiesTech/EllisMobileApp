@@ -5,22 +5,21 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-$RNFirebaseAsStaticFramework = true
+ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+$RNFirebaseDisableSPM = true
 
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-use_frameworks! :linkage => :dynamic
-
 target 'EllisThreadmarks' do
+  project 'EllisThreadmarks.xcodeproj'
   config = use_native_modules!
 
+  # MMKVCore ke error ko fix karne ke liye explicit node_modules path
   pod 'MMKVCore', :path => File.expand_path('~/MMKVCoreLocal')
-
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
@@ -28,8 +27,39 @@ target 'EllisThreadmarks' do
     react_native_post_install(
       installer,
       config[:reactNativePath],
-      :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
+      :mac_catalyst_enabled => false
     )
   end
 end
+
+# # Resolve react_native_pods.rb with node to allow for hoisting
+# require Pod::Executable.execute_command('node', ['-p',
+#   'require.resolve(
+#     "react-native/scripts/react_native_pods.rb",
+#     {paths: [process.argv[1]]},
+#   )', __dir__]).strip
+
+# platform :ios, min_ios_version_supported
+# prepare_react_native_project!
+
+# use_frameworks! :linkage => :dynamic
+
+# target 'EllisThreadmarks' do
+#   project 'EllisThreadmarks.xcodeproj'
+#   config = use_native_modules!
+
+#   pod 'MMKVCore', :path => File.expand_path('~/MMKVCoreLocal')
+
+#   use_react_native!(
+#     :path => config[:reactNativePath],
+#     :app_path => "#{Pod::Config.instance.installation_root}/.."
+#   )
+
+#   post_install do |installer|
+#     react_native_post_install(
+#       installer,
+#       config[:reactNativePath],
+#       :mac_catalyst_enabled => false
+#     )
+#   end
+# end
