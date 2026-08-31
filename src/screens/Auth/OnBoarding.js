@@ -52,9 +52,7 @@ const OnBoarding = ({ navigation }) => {
         >
           <View style={styles.overlay}>
             <View style={styles.contentContainer}>
-              <AppText style={styles.title}>
-                {item.title}
-              </AppText>
+              <AppText style={styles.title}>{item.title}</AppText>
               <AppText style={styles.description}>{item.description}</AppText>
             </View>
           </View>
@@ -122,6 +120,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     maxWidth: '90%',
+    marginBottom: Platform.OS === 'ios' ? 50 : 10,
   },
   title: {
     fontSize: 38,

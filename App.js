@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -32,7 +32,11 @@ const App = () => {
           <StatusBar hidden />
           <SafeAreaView
             edges={['top', 'bottom']}
-            style={{ flex: 1, backgroundColor: Colors.white }}
+            style={{
+              flex: 1,
+              backgroundColor:
+                Platform.OS === 'ios' ? Colors.primary : Colors.white,
+            }}
           >
             <Routes />
             <Toast config={toastConfig} />

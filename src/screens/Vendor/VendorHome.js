@@ -16,6 +16,7 @@ import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import {
   useGetVendorDashboardQuery,
   useGetVendorOrdersQuery,
+  useGetVendorNotificationsQuery,
 } from '../../Services/VendorServices';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -27,6 +28,40 @@ const VendorHome = ({ navigation }) => {
 
   const { data: ordersResponse, isFetching } = useGetVendorOrdersQuery({});
   const apiOrders = ordersResponse?.data || [];
+
+  const { data: notificationsData } = useGetVendorNotificationsQuery(
+    undefined,
+    {
+      refetchOnMountOrArgChange: true,
+    },
+  );
+
+  const notificationsList = Array.isArray(notificationsData?.data)
+    ? notificationsData.data
+    : Array.isArray(notificationsData)
+    ? notificationsData
+    : [];
+
+  const hasUnreadNotifications = notificationsList.some(item => {
+    if (!item) return false;
+    if (
+      item.is_read === false ||
+      item.is_read === 0 ||
+      item.is_read === 'false' ||
+      item.is_read === '0'
+    ) {
+      return true;
+    }
+    if (
+      item.is_read === true ||
+      item.is_read === 1 ||
+      item.is_read === 'true' ||
+      item.is_read === '1'
+    ) {
+      return false;
+    }
+    return item.read_at === null || item.status === 'unread';
+  });
 
   const formatTime = createdAt => {
     if (!createdAt) return '1 hour ago';
@@ -122,6 +157,7 @@ const VendorHome = ({ navigation }) => {
         navigation={navigation}
         homeHeader={true}
         notification={() => navigation.navigate('VendorNotifications')}
+        showBadge={hasUnreadNotifications}
         goBack={false}
       />
       <ScrollView

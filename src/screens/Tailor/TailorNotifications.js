@@ -53,7 +53,11 @@ import { useGetTailorNotificationsQuery } from '../../Services/TailorServices';
 import { useReadNotificationsMutation } from '../../Services/UserServices';
 
 const TailorNotifications = ({ navigation }) => {
-  const { data: apiResponse, isFetching, refetch } = useGetTailorNotificationsQuery(undefined, {
+  const {
+    data: apiResponse,
+    isFetching,
+    refetch,
+  } = useGetTailorNotificationsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
   const [readNotifications] = useReadNotificationsMutation();
@@ -78,12 +82,15 @@ const TailorNotifications = ({ navigation }) => {
       message: item.message || item.body || item.text || '',
       time: formatTime(item.created_at),
       type: item.type || 'system',
-      isUnread: item.read_at === null || !item.is_read || item.status === 'unread',
+      isUnread:
+        item.read_at === null || !item.is_read || item.status === 'unread',
       data: item.data,
     };
   };
 
-  const notifications = (apiResponse?.data || []).map(mapNotification).filter(Boolean);
+  const notifications = (apiResponse?.data || [])
+    .map(mapNotification)
+    .filter(Boolean);
 
   const onRefresh = () => {
     refetch();
@@ -91,24 +98,35 @@ const TailorNotifications = ({ navigation }) => {
 
   const handleMarkAsRead = async item => {
     try {
-      await readNotifications({ id: item.id, notification_id: item.id }).unwrap();
+      await readNotifications({
+        id: item.id,
+        notification_id: item.id,
+      }).unwrap();
       const notificationData = item.data;
-      const bookingId = notificationData?.booking_id || notificationData?.order_id;
-      if ((notificationData?.type === 'booking' || notificationData?.type === 'order' || notificationData?.type === 'review') && bookingId) {
-        navigation.navigate('TailorBookingDetails', { bookingId: Number(bookingId) });
+      const bookingId =
+        notificationData?.booking_id || notificationData?.order_id;
+      if (
+        (notificationData?.type === 'booking' ||
+          notificationData?.type === 'order' ||
+          notificationData?.type === 'review') &&
+        bookingId
+      ) {
+        navigation.navigate('TailorBookingDetails', {
+          bookingId: Number(bookingId),
+        });
       }
     } catch (error) {
       console.log('Error marking notification as read:', error);
     }
   };
 
-  const handleClearAll = async () => {
-    try {
-      await readNotifications({ all: true }).unwrap();
-    } catch (error) {
-      console.log('Error marking all notifications as read:', error);
-    }
-  };
+  // const handleClearAll = async () => {
+  //   try {
+  //     await readNotifications({ all: true }).unwrap();
+  //   } catch (error) {
+  //     console.log('Error marking all notifications as read:', error);
+  //   }
+  // };
 
   const getIcon = type => {
     switch (type) {
@@ -163,13 +181,13 @@ const TailorNotifications = ({ navigation }) => {
         goBack={true}
       />
 
-      {notifications.length > 0 && (
+      {/* {notifications.length > 0 && (
         <View style={styles.topActions}>
           <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7}>
             <AppText style={styles.clearAllText}>Clear All</AppText>
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
 
       <FlatList
         data={notifications}

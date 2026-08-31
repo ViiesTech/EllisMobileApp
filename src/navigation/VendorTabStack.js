@@ -24,8 +24,8 @@ const VendorTabStack = () => {
         tabBarInactiveTintColor: '#333333',
         tabBarStyle: {
           backgroundColor: Colors.primary,
-          height: 65,
-          paddingBottom: 8,
+          height: 66,
+          paddingBottom: 10,
           paddingTop: 8,
           borderTopWidth: 0,
         },

@@ -15,17 +15,51 @@ import { selectCart } from '../../store/productSlice';
 import { selectUser } from '../../store/authSlice';
 import Feather from 'react-native-vector-icons/Feather';
 import { AppImages } from '../../assets/images/AppImages';
-import { useUserProductsQuery } from '../../Services/UserServices';
+import {
+  useUserProductsQuery,
+  useGetUserNotificationsQuery,
+} from '../../Services/UserServices';
 
 const Home = ({ navigation }) => {
   const { data: productsData, isFetching } = useUserProductsQuery({
     limit: 100,
   });
+  const { data: notificationsData } = useGetUserNotificationsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+
   const products = productsData?.data || [];
   const cart = useSelector(selectCart);
   const userProfile = useSelector(selectUser) || {};
 
   const cartTotalItems = cart.length;
+
+  const notificationsList = Array.isArray(notificationsData?.data)
+    ? notificationsData.data
+    : Array.isArray(notificationsData)
+    ? notificationsData
+    : [];
+
+  const hasUnreadNotifications = notificationsList.some(item => {
+    if (!item) return false;
+    if (
+      item.is_read === false ||
+      item.is_read === 0 ||
+      item.is_read === 'false' ||
+      item.is_read === '0'
+    ) {
+      return true;
+    }
+    if (
+      item.is_read === true ||
+      item.is_read === 1 ||
+      item.is_read === 'true' ||
+      item.is_read === '1'
+    ) {
+      return false;
+    }
+    return item.read_at === null || item.status === 'unread';
+  });
 
   // console.log('products:-', products);
   return (
@@ -55,7 +89,7 @@ const Home = ({ navigation }) => {
             onPress={() => navigation.navigate('UserNotifications')}
           >
             <Feather name="bell" size={22} color="#000000" />
-            <View style={styles.bellBadgeDot} />
+            {hasUnreadNotifications && <View style={styles.bellBadgeDot} />}
           </TouchableOpacity>
         </View>
 
@@ -174,7 +208,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.white,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
   },
   container: {
     flex: 1,

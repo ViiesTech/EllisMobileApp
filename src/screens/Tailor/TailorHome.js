@@ -7,17 +7,17 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Colors from '../../config/Colors';
 import AppText from '../../components/AppText';
 import Feather from 'react-native-vector-icons/Feather';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../store/authSlice';
-import ApiConstants from '../../Constants/Api.constants';
 import {
   useGetTailorBookingsQuery,
   useGetTailorDashboardQuery,
+  useGetTailorNotificationsQuery,
 } from '../../Services/TailorServices';
 import { resolveImage } from '../../utils';
 import moment from 'moment';
@@ -121,6 +121,12 @@ const TailorHome = ({ navigation }) => {
     per_page: 5,
     status: 'pending',
   });
+  const { data: notificationsData } = useGetTailorNotificationsQuery(
+    undefined,
+    {
+      refetchOnMountOrArgChange: true,
+    },
+  );
 
   const { data: dashboardData } = useGetTailorDashboardQuery();
   const stats = dashboardData?.data || {};
@@ -128,7 +134,32 @@ const TailorHome = ({ navigation }) => {
   const bookingsData = data?.data || [];
   const newBookings = bookingsData.map(mapApiBookingToUi);
 
-  // console.log('bookingsData:-', bookingsData);
+  const notificationsList = Array.isArray(notificationsData?.data)
+    ? notificationsData.data
+    : Array.isArray(notificationsData)
+    ? notificationsData
+    : [];
+
+  const hasUnreadNotifications = notificationsList.some(item => {
+    if (!item) return false;
+    if (
+      item.is_read === false ||
+      item.is_read === 0 ||
+      item.is_read === 'false' ||
+      item.is_read === '0'
+    ) {
+      return true;
+    }
+    if (
+      item.is_read === true ||
+      item.is_read === 1 ||
+      item.is_read === 'true' ||
+      item.is_read === '1'
+    ) {
+      return false;
+    }
+    return item.read_at === null || item.status === 'unread';
+  });
 
   return (
     <View style={styles.safeArea}>
@@ -157,7 +188,7 @@ const TailorHome = ({ navigation }) => {
           onPress={() => navigation.navigate('TailorNotifications')}
         >
           <Feather name="bell" size={20} color="#000000" />
-          <View style={styles.badgeDot} />
+          {hasUnreadNotifications && <View style={styles.badgeDot} />}
         </TouchableOpacity>
       </View>
 
@@ -341,7 +372,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     backgroundColor: Colors.white,
-    marginTop: 30,
+    marginTop: Platform.OS == 'ios' ? 0 : 30,
   },
   profileSection: {
     flexDirection: 'row',

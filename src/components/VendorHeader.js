@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from 'react-native';
 import Colors from '../config/Colors';
 import Fonts from '../config/Fonts';
 import AppText from './AppText';
@@ -13,6 +19,7 @@ const VendorHeader = ({
   goBack,
   homeHeader,
   notification,
+  showBadge,
 }) => {
   const userProfile = useSelector(selectUser) || {};
 
@@ -58,7 +65,7 @@ const VendorHeader = ({
             }
           >
             <Feather name="bell" size={20} color="#000000" />
-            <View style={styles.badgeDot} />
+            {showBadge && <View style={styles.badgeDot} />}
           </TouchableOpacity>
         )}
       </View>
@@ -103,7 +110,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: Colors.white,
-    marginTop: 30,
+    marginTop: Platform.OS == 'ios' ? 0 : 30,
   },
   backBtn: {
     width: 40,
@@ -152,7 +159,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     backgroundColor: Colors.white,
-    marginTop: 30,
+    marginTop: Platform.OS == 'ios' ? 0 : 30,
   },
   profileContainer: {
     flexDirection: 'row',

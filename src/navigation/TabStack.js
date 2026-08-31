@@ -35,8 +35,8 @@ const TabStack = () => {
         },
         tabBarStyle: {
           backgroundColor: '#DBA83A',
-          height: Platform.OS === 'ios' ? 82 : 66,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+          height: 66,
+          paddingBottom: 10,
           paddingTop: 8,
           borderTopWidth: 0,
           elevation: 8,
